@@ -2,7 +2,7 @@
 Code Compliance Service — MCP Tool: check_compliance
 
 Enforces building regulations:
-  1. Max 6 rooms per floor (fire safety).
+  1. Max rooms per floor (fire safety; MAX_ROOMS_PER_FLOOR, default 12).
   2. Buildings over 3 floors must include an elevator shaft (advisory).
   3. Every floor must have at least 1 room.
 """

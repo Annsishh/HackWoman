@@ -12,6 +12,11 @@ venv/
 !.env.example
 !.env.*.example
 *.local
+# The real key files in this repo (already covered above; listed so it's obvious)
+backend/.env
+backend/.env.local
+viteapp/.env
+viteapp/.env.local
 
 # Node / build output
 node_modules/
@@ -33,3 +38,7 @@ desktop.ini
 .stitch/
 .claude/
 skills-lock.json
+
+# Saved building state (backend/state/store.py)
+backend/state/building_state.json
+backend/state/building_state.tmp

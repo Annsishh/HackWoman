@@ -55,7 +55,11 @@ def _cost_model():
     if not os.path.exists(path):
         logger.info("cost_model.joblib not found at %s — run model/train_cost_model.py", path)
         return None
-    return joblib.load(path)
+    try:
+        return joblib.load(path)
+    except Exception as exc:
+        logger.warning("Failed to load cost_model.joblib (%s) — using fallback.", exc)
+        return None
 
 
 @lru_cache(maxsize=1)
@@ -66,7 +70,11 @@ def _risk_model():
     if not os.path.exists(path):
         logger.info("risk_model.joblib not found at %s — run model/train_risk_model.py", path)
         return None
-    return joblib.load(path)
+    try:
+        return joblib.load(path)
+    except Exception as exc:
+        logger.warning("Failed to load risk_model.joblib (%s) — using fallback.", exc)
+        return None
 
 
 def predict_cost(

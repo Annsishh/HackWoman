@@ -3,18 +3,29 @@ from typing import List, Optional, Literal
 from datetime import datetime
 
 # Supported room types (used across backend + frontend)
-ROOM_TYPES = ["bedroom", "bathroom", "kitchen", "hallway", "office", "store", "general"]
-RoomType = Literal["bedroom", "bathroom", "kitchen", "hallway", "office", "store", "general"]
+ROOM_TYPES = ["bedroom", "bathroom", "kitchen", "living", "dining", "hallway", "office", "store", "general"]
+RoomType = Literal["bedroom", "bathroom", "kitchen", "living", "dining", "hallway", "office", "store", "general"]
+
+# Outdoor features the user can place on the plot around the building
+SITE_FEATURE_TYPES = ["parking", "garden"]
 
 # Cost multipliers relative to base sqft cost (e.g. kitchen costs 1.8× more than general)
 ROOM_COST_MULTIPLIERS: dict[str, float] = {
     "bedroom":  1.0,
     "bathroom": 1.5,
     "kitchen":  1.8,
+    "living":   1.0,
+    "dining":   1.0,
     "hallway":  0.6,
     "office":   1.2,
     "store":    0.8,
     "general":  1.0,
+}
+
+# Site features are far cheaper per sqft than built-up rooms
+SITE_COST_MULTIPLIERS: dict[str, float] = {
+    "parking": 0.35,
+    "garden":  0.15,
 }
 
 # Default square footage per room type (sqft)
@@ -22,6 +33,8 @@ ROOM_DEFAULT_SQFT: dict[str, int] = {
     "bedroom":  250,
     "bathroom":  80,
     "kitchen":  150,
+    "living":   300,
+    "dining":   180,
     "hallway":  120,
     "office":   200,
     "store":    180,
@@ -29,17 +42,91 @@ ROOM_DEFAULT_SQFT: dict[str, int] = {
 }
 
 
+class Rect(BaseModel):
+    """Axis-aligned rectangle in integer feet."""
+    x: int
+    z: int
+    w: int
+    d: int
+
+
+def default_dims(area_sqft: int) -> tuple[int, int]:
+    """Near-square width × depth (ft) covering at least `area_sqft`."""
+    w = max(1, round(area_sqft ** 0.5))
+    return w, max(1, -(-area_sqft // w))
+
+
+WINDOW_SIDES = ["front", "back", "left", "right"]
+
+
+class WindowSpec(BaseModel):
+    """Windows the user asked for on one exterior side of a room (front = road side)."""
+    side: str
+    count: int = 1
+    width_ft: float = 4
+    height_ft: float = 4
+
+
 class Room(BaseModel):
     id: str
     name: str
     type: str = "general"
     area_sqft: int = 200
+    # Position chosen by the user on the floor plan (ft, building bbox frame).
+    # x/z are None until the user places the room.
+    x: Optional[int] = None
+    z: Optional[int] = None
+    w: int = 0
+    d: int = 0
+    # Sides without an entry get default windows in the 3D view; count=0 means none
+    windows: List[WindowSpec] = Field(default_factory=list)
+
+    @property
+    def placed(self) -> bool:
+        return self.x is not None and self.z is not None
+
+    @property
+    def rect(self) -> Rect:
+        return Rect(x=self.x or 0, z=self.z or 0, w=self.w, d=self.d)
 
 
 class Floor(BaseModel):
     id: str
     number: int
+    # Each floor can have its own shape, as long as it sits within the floor below
+    shape: str = "rectangle"
     rooms: List[Room] = Field(default_factory=list)
+    # Usable outline of this floor (ft, building bbox frame) and its area
+    footprint: List[Rect] = Field(default_factory=list)
+    area_sqft: int = 0
+
+
+class SiteFeature(BaseModel):
+    id: str
+    name: str
+    type: str  # "parking" | "garden"
+    area_sqft: int
+    x: int
+    z: int
+    w: int
+    d: int
+
+    @property
+    def rect(self) -> Rect:
+        return Rect(x=self.x, z=self.z, w=self.w, d=self.d)
+
+
+class SiteLayout(BaseModel):
+    plot_width_ft: int = 0
+    plot_depth_ft: int = 0
+    # Where the building's bounding box sits inside the plot
+    building_x: int = 0
+    building_z: int = 0
+    base_width_ft: int = 0
+    base_depth_ft: int = 0
+    # Ground-floor footprint (building bbox frame)
+    footprint: List[Rect] = Field(default_factory=list)
+    features: List[SiteFeature] = Field(default_factory=list)
 
 
 class Budget(BaseModel):
@@ -58,6 +145,12 @@ class Constraints(BaseModel):
     defaultRoomSqft: int = 500
     shape: str = "rectangle"
     district_id: str = "bengaluru-urban"
+    # Built-up area of each floor, and the land it sits on (plot > floor)
+    floorAreaSqft: int = 1200
+    plotAreaSqft: int = 2400
+    # Wall thickness in inches (9" ≈ 230 mm brick, 4.5" ≈ 115 mm partition)
+    exteriorWallIn: float = 9
+    interiorWallIn: float = 4.5
 
 
 class HistoryEntry(BaseModel):
@@ -70,6 +163,7 @@ class BuildingState(BaseModel):
     floors: List[Floor] = Field(default_factory=list)
     budget: Budget = Field(default_factory=Budget)
     constraints: Constraints = Field(default_factory=Constraints)
+    site: SiteLayout = Field(default_factory=SiteLayout)
     history: List[HistoryEntry] = Field(default_factory=list)
 
 

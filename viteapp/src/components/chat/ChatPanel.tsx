@@ -132,12 +132,10 @@ export function ChatPanel() {
 
   return (
     <div style={{
-      width: '340px',
-      minWidth: '300px',
+      width: '100%',
       display: 'flex',
       flexDirection: 'column',
       background: '#0d0d14',
-      borderRight: '1px solid var(--border-subtle)',
       flexShrink: 0,
       height: '100%',
     }}>

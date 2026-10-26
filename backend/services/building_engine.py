@@ -8,20 +8,50 @@ import uuid
 from datetime import datetime, timezone
 from copy import deepcopy
 
-from models.building import BuildingState, Floor, Room, HistoryEntry, ROOM_DEFAULT_SQFT, ROOM_COST_MULTIPLIERS
+from models.building import (
+    BuildingState, Floor, Room, HistoryEntry, SiteFeature, Rect, WindowSpec,
+    ROOM_DEFAULT_SQFT, SITE_COST_MULTIPLIERS, default_dims,
+)
+from services.geometry import prune_windows, sync_footprints
 
 
 def _now() -> str:
     return datetime.now(timezone.utc).isoformat()
 
 
-def _next_room(floor_number: int, index: int, area_sqft: int = 500) -> Room:
+def _next_room(floor_number: int, index: int, area_sqft: int = 500, room_type: str = "general", name: str | None = None) -> Room:
+    """A new room, not yet placed — the user picks its spot on the floor plan."""
+    w, d = default_dims(area_sqft)
     return Room(
         id=f"room-{floor_number}-{index}-{uuid.uuid4().hex[:6]}",
-        name=f"Room {index}",
-        type="general",
+        name=name or (f"Room {index}" if room_type == "general" else f"{room_type.capitalize()} {index}"),
+        type=room_type,
         area_sqft=area_sqft,
+        w=w,
+        d=d,
     )
+
+
+def _new_floor(state: BuildingState, number: int, shape: str | None = None) -> Floor:
+    """
+    An empty floor slab; rooms are added and placed by the user. It takes the
+    shape of the floor below unless one is given. Callers run sync_footprints
+    afterwards to compute its outline.
+    """
+    below = next((f for f in state.floors if f.number == number - 1), None)
+    return Floor(
+        id=f"floor-{number}-{uuid.uuid4().hex[:6]}",
+        number=number,
+        shape=shape or (below.shape if below else state.constraints.shape),
+    )
+
+
+def _find_room(state: BuildingState, room_id: str) -> tuple[Floor, Room]:
+    for floor in state.floors:
+        for room in floor.rooms:
+            if room.id == room_id:
+                return floor, room
+    raise KeyError(f"Room {room_id} not found.")
 
 
 def _recalculate_budget(state: BuildingState) -> BuildingState:
@@ -32,25 +62,25 @@ def _recalculate_budget(state: BuildingState) -> BuildingState:
         cost_per_floor + sum((r.area_sqft * cost_per_sqft) for r in f.rooms)
         for f in state.floors
     )
+    used += sum(
+        int(feat.area_sqft * cost_per_sqft * SITE_COST_MULTIPLIERS.get(feat.type, 0.3))
+        for feat in state.site.features
+    )
     state.budget.used = used
     state.budget.remaining = state.budget.total - used
     return state
 
 
-def add_floor(state: BuildingState) -> tuple[BuildingState, HistoryEntry]:
+def add_floor(state: BuildingState, shape: str | None = None) -> tuple[BuildingState, HistoryEntry]:
     state = deepcopy(state)
     new_number = len(state.floors) + 1
-    floor = Floor(
-        id=f"floor-{new_number}-{uuid.uuid4().hex[:6]}",
-        number=new_number,
-        rooms=[_next_room(new_number, 1, state.constraints.defaultRoomSqft)],
-    )
-    state.floors.append(floor)
+    state.floors.append(_new_floor(state, new_number, shape))
+    state = sync_footprints(state)
     state = _recalculate_budget(state)
     entry = HistoryEntry(
         action="add_floor",
         timestamp=_now(),
-        details=f"Added Floor {new_number} with 1 default room.",
+        details=f"Added Floor {new_number} ({state.floors[-1].shape}, empty, {state.floors[-1].area_sqft} sq ft).",
     )
     state.history.append(entry)
     return state, entry
@@ -60,18 +90,13 @@ def add_floors(state: BuildingState, count: int) -> tuple[BuildingState, History
     state = deepcopy(state)
     start = len(state.floors) + 1
     for i in range(count):
-        n = start + i
-        floor = Floor(
-            id=f"floor-{n}-{uuid.uuid4().hex[:6]}",
-            number=n,
-            rooms=[_next_room(n, 1, state.constraints.defaultRoomSqft)],
-        )
-        state.floors.append(floor)
+        state.floors.append(_new_floor(state, start + i))
+    state = sync_footprints(state)
     state = _recalculate_budget(state)
     entry = HistoryEntry(
         action="add_floors",
         timestamp=_now(),
-        details=f"Added {count} floor(s) (Floor {start} to Floor {start + count - 1}), each with 1 default room.",
+        details=f"Added {count} floor(s) (Floor {start} to Floor {start + count - 1}).",
     )
     state.history.append(entry)
     return state, entry
@@ -85,6 +110,7 @@ def remove_floor(state: BuildingState, floor_number: int) -> tuple[BuildingState
     for i, floor in enumerate(state.floors):
         floor.number = i + 1
         floor.id = f"floor-{i + 1}-{floor.id.split('-')[-1]}"
+    state = sync_footprints(state)
     state = _recalculate_budget(state)
     entry = HistoryEntry(
         action="remove_floor",
@@ -95,19 +121,19 @@ def remove_floor(state: BuildingState, floor_number: int) -> tuple[BuildingState
     return state, entry
 
 
-def add_rooms(state: BuildingState, floor_number: int, count: int) -> tuple[BuildingState, HistoryEntry]:
+def add_rooms(state: BuildingState, floor_number: int, count: int, area_sqft: int) -> tuple[BuildingState, HistoryEntry]:
     state = deepcopy(state)
     for floor in state.floors:
         if floor.number == floor_number:
             start_idx = len(floor.rooms) + 1
             for i in range(count):
-                floor.rooms.append(_next_room(floor_number, start_idx + i, state.constraints.defaultRoomSqft))
+                floor.rooms.append(_next_room(floor_number, start_idx + i, area_sqft))
             break
     state = _recalculate_budget(state)
     entry = HistoryEntry(
         action="add_rooms",
         timestamp=_now(),
-        details=f"Added {count} room(s) to Floor {floor_number}.",
+        details=f"Added {count} room(s) of {area_sqft} sq ft to Floor {floor_number} (awaiting placement).",
     )
     state.history.append(entry)
     return state, entry
@@ -169,6 +195,12 @@ def reset_building(state: BuildingState) -> tuple[BuildingState, HistoryEntry]:
     # Retain custom configuration limits
     new_state.constraints.shape = state.constraints.shape
     new_state.constraints.defaultRoomSqft = state.constraints.defaultRoomSqft
+    new_state.constraints.floorAreaSqft = state.constraints.floorAreaSqft
+    new_state.constraints.plotAreaSqft = state.constraints.plotAreaSqft
+    new_state.constraints.district_id = state.constraints.district_id
+    new_state.constraints.exteriorWallIn = state.constraints.exteriorWallIn
+    new_state.constraints.interiorWallIn = state.constraints.interiorWallIn
+    new_state.site = state.site.model_copy(update={"features": []}, deep=True)
     new_state.budget.total = state.budget.total
     new_state.budget.remaining = state.budget.total
     new_state.budget.costPerSqft = state.budget.costPerSqft
@@ -183,30 +215,25 @@ def reset_building(state: BuildingState) -> tuple[BuildingState, HistoryEntry]:
 
 
 def add_typed_room(
-    state: BuildingState, floor_number: int, room_type: str, count: int = 1
+    state: BuildingState, floor_number: int, room_type: str, count: int = 1, area_sqft: int | None = None
 ) -> tuple[BuildingState, HistoryEntry]:
-    """Add one or more rooms of a specific type (bedroom, bathroom, kitchen, etc.)."""
+    """Add one or more rooms of a specific type (bedroom, bathroom, kitchen, etc.), not yet placed."""
     state = deepcopy(state)
     room_type = room_type.lower().strip()
-    sqft = ROOM_DEFAULT_SQFT.get(room_type, state.constraints.defaultRoomSqft)
+    sqft = area_sqft or ROOM_DEFAULT_SQFT.get(room_type, state.constraints.defaultRoomSqft)
 
     for floor in state.floors:
         if floor.number == floor_number:
-            start_idx = len(floor.rooms) + 1
+            start_idx = sum(1 for r in floor.rooms if r.type == room_type) + 1
             for i in range(count):
-                floor.rooms.append(Room(
-                    id=f"room-{floor_number}-{start_idx + i}-{uuid.uuid4().hex[:6]}",
-                    name=f"{room_type.capitalize()} {start_idx + i}",
-                    type=room_type,
-                    area_sqft=sqft,
-                ))
+                floor.rooms.append(_next_room(floor_number, start_idx + i, sqft, room_type))
             break
 
     state = _recalculate_budget(state)
     entry = HistoryEntry(
         action="add_typed_room",
         timestamp=_now(),
-        details=f"Added {count} {room_type}(s) to Floor {floor_number}.",
+        details=f"Added {count} {room_type}(s) of {sqft} sq ft to Floor {floor_number} (awaiting placement).",
     )
     state.history.append(entry)
     return state, entry
@@ -240,3 +267,152 @@ def remove_typed_rooms(
     state.history.append(entry)
     return state, entry
 
+
+# ── Direct manipulation from the floor-plan editor ─────────────────────────
+# Callers validate placement first (services.geometry); these only mutate.
+
+def place_room(
+    state: BuildingState, floor_number: int, room_type: str, area_sqft: int,
+    rect: Rect, name: str | None = None,
+) -> tuple[BuildingState, HistoryEntry]:
+    state = deepcopy(state)
+    floor = next(f for f in state.floors if f.number == floor_number)
+    same_type = sum(1 for r in floor.rooms if r.type == room_type)
+    room = _next_room(floor_number, same_type + 1, area_sqft, room_type, name)
+    room.x, room.z, room.w, room.d = rect.x, rect.z, rect.w, rect.d
+    floor.rooms.append(room)
+    state = _recalculate_budget(state)
+    entry = HistoryEntry(
+        action="place_room",
+        timestamp=_now(),
+        details=f"Placed {room.name} ({rect.w}×{rect.d} ft) on Floor {floor_number} at ({rect.x}, {rect.z}).",
+    )
+    state.history.append(entry)
+    return state, entry
+
+
+def update_room(
+    state: BuildingState, room_id: str, rect: Rect | None = None, name: str | None = None,
+) -> tuple[BuildingState, HistoryEntry]:
+    """Move / resize / first-time place an existing room, or rename it."""
+    state = deepcopy(state)
+    floor, room = _find_room(state, room_id)
+    if rect is not None:
+        room.x, room.z, room.w, room.d = rect.x, rect.z, rect.w, rect.d
+        room.area_sqft = rect.w * rect.d
+    if name:
+        room.name = name
+    prune_windows(floor)
+    state = _recalculate_budget(state)
+    entry = HistoryEntry(
+        action="update_room",
+        timestamp=_now(),
+        details=f"Updated {room.name} on Floor {floor.number}.",
+    )
+    state.history.append(entry)
+    return state, entry
+
+
+def delete_room(state: BuildingState, room_id: str) -> tuple[BuildingState, HistoryEntry]:
+    state = deepcopy(state)
+    floor, room = _find_room(state, room_id)
+    floor.rooms = [r for r in floor.rooms if r.id != room_id]
+    state = _recalculate_budget(state)
+    entry = HistoryEntry(
+        action="delete_room",
+        timestamp=_now(),
+        details=f"Removed {room.name} from Floor {floor.number}.",
+    )
+    state.history.append(entry)
+    return state, entry
+
+
+def add_site_feature(
+    state: BuildingState, feature_type: str, rect: Rect, name: str | None = None,
+) -> tuple[BuildingState, HistoryEntry]:
+    state = deepcopy(state)
+    n = sum(1 for f in state.site.features if f.type == feature_type) + 1
+    feature = SiteFeature(
+        id=f"{feature_type}-{uuid.uuid4().hex[:6]}",
+        name=name or f"{feature_type.capitalize()} {n}",
+        type=feature_type,
+        area_sqft=rect.w * rect.d,
+        x=rect.x, z=rect.z, w=rect.w, d=rect.d,
+    )
+    state.site.features.append(feature)
+    state = _recalculate_budget(state)
+    entry = HistoryEntry(
+        action="add_site_feature",
+        timestamp=_now(),
+        details=f"Added {feature.name} ({feature.area_sqft} sq ft) to the plot.",
+    )
+    state.history.append(entry)
+    return state, entry
+
+
+def update_site_feature(state: BuildingState, feature_id: str, rect: Rect) -> tuple[BuildingState, HistoryEntry]:
+    state = deepcopy(state)
+    feature = next(f for f in state.site.features if f.id == feature_id)
+    feature.x, feature.z, feature.w, feature.d = rect.x, rect.z, rect.w, rect.d
+    feature.area_sqft = rect.w * rect.d
+    state = _recalculate_budget(state)
+    entry = HistoryEntry(action="update_site_feature", timestamp=_now(), details=f"Moved {feature.name}.")
+    state.history.append(entry)
+    return state, entry
+
+
+def delete_site_feature(state: BuildingState, feature_id: str) -> tuple[BuildingState, HistoryEntry]:
+    state = deepcopy(state)
+    feature = next(f for f in state.site.features if f.id == feature_id)
+    state.site.features = [f for f in state.site.features if f.id != feature_id]
+    state = _recalculate_budget(state)
+    entry = HistoryEntry(action="delete_site_feature", timestamp=_now(), details=f"Removed {feature.name}.")
+    state.history.append(entry)
+    return state, entry
+
+
+def set_floor_shape(state: BuildingState, floor_number: int, shape: str) -> tuple[BuildingState, HistoryEntry]:
+    """Reshape one floor (caller checks support). Rooms that no longer fit are un-placed."""
+    state = deepcopy(state)
+    floor = next(f for f in state.floors if f.number == floor_number)
+    old = floor.shape
+    floor.shape = shape
+    state = sync_footprints(state)
+    state = _recalculate_budget(state)
+    entry = HistoryEntry(
+        action="set_floor_shape",
+        timestamp=_now(),
+        details=f"Floor {floor_number} changed from {old} to {shape} ({floor.area_sqft} sq ft).",
+    )
+    state.history.append(entry)
+    return state, entry
+
+
+def set_room_windows(state: BuildingState, room_id: str, spec: WindowSpec) -> tuple[BuildingState, HistoryEntry]:
+    """Set the windows on one side of a room (caller validates the spec)."""
+    state = deepcopy(state)
+    floor, room = _find_room(state, room_id)
+    room.windows = [w for w in room.windows if w.side != spec.side] + [spec]
+    entry = HistoryEntry(
+        action="set_room_windows",
+        timestamp=_now(),
+        details=(
+            f"{room.name} (Floor {floor.number}): {spec.count} window(s) of "
+            f"{spec.width_ft:g}×{spec.height_ft:g} ft on the {spec.side} wall."
+        ),
+    )
+    state.history.append(entry)
+    return state, entry
+
+
+def set_walls(state: BuildingState, exterior_in: float, interior_in: float) -> tuple[BuildingState, HistoryEntry]:
+    state = deepcopy(state)
+    state.constraints.exteriorWallIn = exterior_in
+    state.constraints.interiorWallIn = interior_in
+    entry = HistoryEntry(
+        action="set_walls",
+        timestamp=_now(),
+        details=f'Wall thickness set to {exterior_in:g}" exterior / {interior_in:g}" interior.',
+    )
+    state.history.append(entry)
+    return state, entry

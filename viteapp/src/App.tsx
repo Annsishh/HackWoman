@@ -6,7 +6,9 @@ import { NotificationsProvider } from './context/NotificationsContext';
 import { BuildingProvider } from './context/BuildingContext';
 import { TopNav, type Page } from './components/layout/TopNav';
 import { LeftSidebar } from './components/layout/LeftSidebar';
-import { ChatPanel } from './components/chat/ChatPanel';
+import { LeftWorkspace } from './components/layout/LeftWorkspace';
+import { DesignProvider } from './context/DesignContext';
+import { PresetDialog } from './components/planner/PresetDialog';
 import { BuildingVisualizer } from './components/visualizer/BuildingVisualizer';
 import { StatsPanel } from './components/stats/StatsPanel';
 import { ModelsPage } from './components/pages/ModelsPage';
@@ -50,15 +52,18 @@ function AppShell() {
           onNavigate={p => setCurrentPage(p)}
           onOpenProfile={() => setCurrentPage('profile')}
         />
+        <DesignProvider>
         <div style={{ display: 'flex', flex: 1, overflow: 'hidden' }}>
           {currentPage !== 'profile' && <LeftSidebar />}
 
-          {currentPage === 'home' && <><ChatPanel /><BuildingVisualizer /><StatsPanel /></>}
+          {currentPage === 'home' && <><LeftWorkspace /><BuildingVisualizer /><StatsPanel /></>}
           {currentPage === 'models' && <ModelsPage />}
           {currentPage === 'datasets' && <DatasetsPage />}
           {currentPage === 'simulations' && <SimulationsPage />}
           {currentPage === 'profile' && <ProfilePage onBack={() => setCurrentPage('home')} />}
         </div>
+        <PresetDialog />
+        </DesignProvider>
       </div>
     </BuildingProvider>
   );

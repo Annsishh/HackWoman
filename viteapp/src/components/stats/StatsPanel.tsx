@@ -1,8 +1,7 @@
 import { TrendingUp, TrendingDown } from 'lucide-react';
 import { useBuilding } from '../../context/BuildingContext';
 import { formatCurrency, formatPercent, buildingHealthScore } from '../../utils/formatters';
-
-const FLOOR_AREA_SQFT = 4740;
+import { LiveConditions } from './LiveConditions';
 
 const COST_CATEGORIES = [
   { label: 'STRUCTURAL', color: '#ef4444', key: 'structural' as const },
@@ -52,7 +51,7 @@ export function StatsPanel() {
 
   const totalFloors = floors.length;
   const totalRooms = floors.reduce((s, f) => s + f.rooms.length, 0);
-  const totalAreaSqFt = totalFloors * FLOOR_AREA_SQFT;
+  const totalAreaSqFt = floors.reduce((s, f) => s + f.area_sqft, 0);
   const healthScore = buildingHealthScore(floors);
   const budgetUsedPct = formatPercent(budget.used, budget.total);
 
@@ -64,12 +63,12 @@ export function StatsPanel() {
   /* ── Area donut segments (equal per floor, up to 6 colors) ── */
   const areaSegments = totalFloors === 0
     ? [{ color: 'rgba(255,255,255,0.08)', pct: 100 }]
-    : floors.map((_, i) => ({
+    : floors.map((_f, i) => ({
         color: [
           '#ef4444', '#06b6d4', '#10b981', '#f59e0b', '#8b5cf6', '#ec4899',
           '#14b8a6', '#f97316', '#6366f1', '#a855f7',
         ][i % 10],
-        pct: 100 / totalFloors,
+        pct: totalAreaSqFt > 0 ? (100 * floors[i].area_sqft) / totalAreaSqFt : 100 / totalFloors,
       }));
 
   const efficiencyGain = healthScore > 0 ? (healthScore * 0.15).toFixed(1) : '0.0';
@@ -141,6 +140,33 @@ export function StatsPanel() {
 
         <Divider />
 
+        {/* ── ML Structural Risk (moved here from the 3D view) ── */}
+        {(() => {
+          const r = structuralRisk;
+          const color = r === null ? '#64748b' : r >= 0.5 ? '#ef4444' : r >= 0.25 ? '#f59e0b' : '#10b981';
+          return (
+            <div style={{ background: `${color}10`, border: `1px solid ${color}30`, borderLeft: `3px solid ${color}`, borderRadius: '8px', padding: '0.7rem 0.75rem' }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <span style={{ fontSize: '0.6rem', fontWeight: 700, letterSpacing: '0.12em', color: 'var(--text-tertiary)' }}>ML STRUCTURAL RISK</span>
+                <span style={{ fontSize: '1.15rem', fontWeight: 800, color }}>{r === null ? '—' : `${Math.round(r * 100)}%`}</span>
+              </div>
+              <div style={{ marginTop: '0.4rem', height: '4px', background: 'rgba(255,255,255,0.05)', borderRadius: '2px', overflow: 'hidden' }}>
+                <div style={{ height: '100%', width: `${r === null ? 0 : Math.round(r * 100)}%`, background: color, borderRadius: '2px', transition: 'width 0.5s ease' }} />
+              </div>
+              <div style={{ fontSize: '0.6rem', color: 'var(--text-tertiary)', marginTop: '0.35rem' }}>
+                {r === null ? 'Awaiting first assessment — add a floor or room' : `${r >= 0.5 ? 'HIGH' : r >= 0.25 ? 'MODERATE' : 'LOW'} · seismic, soil & wind`}
+              </div>
+            </div>
+          );
+        })()}
+
+        <Divider />
+
+        {/* ── Live site conditions ── */}
+        <LiveConditions />
+
+        <Divider />
+
         {/* ── Floors / Rooms ── */}
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.6rem' }}>
           <StatCard label="TOTAL FLOORS" value={totalFloors} />
@@ -175,7 +201,9 @@ export function StatsPanel() {
                     flexShrink: 0,
                   }} />
                   <span style={{ color: 'var(--text-secondary)', flex: 1 }}>Floor {floor.number}</span>
-                  <span style={{ color: 'var(--text-tertiary)' }}>{FLOOR_AREA_SQFT.toLocaleString()} ft²</span>
+                  <span style={{ color: 'var(--text-tertiary)' }}>
+                    {floor.rooms.reduce((s, r) => s + r.area_sqft, 0).toLocaleString()} / {floor.area_sqft.toLocaleString()} ft²
+                  </span>
                 </div>
               ))}
             </div>
@@ -241,44 +269,6 @@ export function StatsPanel() {
             </div>
           ))}
         </div>
-
-        {/* ── ML Structural Risk ── */}
-        {structuralRisk !== null && (
-          <>
-            <div style={{
-              background: structuralRisk >= 0.5 ? 'rgba(239,68,68,0.06)' : structuralRisk >= 0.25 ? 'rgba(245,158,11,0.06)' : 'rgba(16,185,129,0.06)',
-              border: `1px solid ${structuralRisk >= 0.5 ? 'rgba(239,68,68,0.15)' : structuralRisk >= 0.25 ? 'rgba(245,158,11,0.15)' : 'rgba(16,185,129,0.15)'}`,
-              borderRadius: '8px',
-              padding: '0.75rem',
-            }}>
-              <div style={{ fontSize: '0.6rem', fontWeight: 700, letterSpacing: '0.12em', color: 'var(--text-tertiary)', marginBottom: '0.4rem' }}>
-                ML STRUCTURAL RISK
-              </div>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                <span style={{
-                  fontSize: '1.5rem',
-                  fontWeight: 800,
-                  color: structuralRisk >= 0.5 ? '#ef4444' : structuralRisk >= 0.25 ? '#f59e0b' : '#10b981',
-                }}>
-                  {Math.round(structuralRisk * 100)}%
-                </span>
-                <span style={{ fontSize: '0.6rem', color: 'var(--text-tertiary)' }}>
-                  seismic + soil + wind
-                </span>
-              </div>
-              <div style={{ marginTop: '0.4rem', height: '4px', background: 'rgba(255,255,255,0.05)', borderRadius: '2px', overflow: 'hidden' }}>
-                <div style={{
-                  height: '100%',
-                  width: `${Math.round(structuralRisk * 100)}%`,
-                  background: structuralRisk >= 0.5 ? '#ef4444' : structuralRisk >= 0.25 ? '#f59e0b' : '#10b981',
-                  borderRadius: '2px',
-                  transition: 'width 0.5s ease',
-                }} />
-              </div>
-            </div>
-            <Divider />
-          </>
-        )}
 
         {/* ── Health Score ── */}
         <div style={{

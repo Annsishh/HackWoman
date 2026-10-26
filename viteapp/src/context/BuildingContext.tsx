@@ -1,18 +1,65 @@
-import React, { createContext, useContext, useReducer, type ReactNode } from 'react';
+import React, { createContext, useContext, useEffect, useReducer, type ReactNode } from 'react';
+import { fetchBuildingState, onServerState } from '../services/api';
 import { getDefaultDistrict, type DistrictData } from '../data/karnataka_db';
 
 // --- Types ---
+/** Axis-aligned rectangle in feet. */
+export interface Rect {
+  x: number;
+  z: number;
+  w: number;
+  d: number;
+}
+
+export type WallSide = 'front' | 'back' | 'left' | 'right';
+
+/** Windows the user asked for on one outside wall of a room (front = road side). */
+export interface WindowSpec {
+  side: WallSide;
+  count: number;
+  width_ft: number;
+  height_ft: number;
+}
+
 export interface Room {
   id: string;
   name: string;
   type: string;
   area_sqft: number;
+  /** Spot picked by the user on the floor plan (ft, building bbox frame); null until placed. */
+  x: number | null;
+  z: number | null;
+  w: number;
+  d: number;
+  /** Sides without an entry get default windows; count 0 = no windows. */
+  windows: WindowSpec[];
 }
 
 export interface Floor {
   id: string;
   number: number;
+  shape: string;
   rooms: Room[];
+  footprint: Rect[];
+  area_sqft: number;
+}
+
+export interface SiteFeature extends Rect {
+  id: string;
+  name: string;
+  type: 'parking' | 'garden';
+  area_sqft: number;
+}
+
+export interface SiteLayout {
+  plot_width_ft: number;
+  plot_depth_ft: number;
+  building_x: number;
+  building_z: number;
+  base_width_ft: number;
+  base_depth_ft: number;
+  footprint: Rect[];
+  features: SiteFeature[];
 }
 
 export interface Budget {
@@ -30,12 +77,17 @@ export interface Constraints {
   minRoomsPerFloor: number;
   defaultRoomSqft: number;
   shape: string;
+  floorAreaSqft: number;
+  plotAreaSqft: number;
+  exteriorWallIn: number;
+  interiorWallIn: number;
 }
 
 export interface BuildingState {
   floors: Floor[];
   budget: Budget;
   constraints: Constraints;
+  site: SiteLayout;
   history: Array<{ action: string; timestamp: string; details: string }>;
   district: DistrictData;
   structuralRisk: number | null;
@@ -56,10 +108,18 @@ const initialState: BuildingState = {
   },
   constraints: {
     maxFloors: 10,
-    maxRoomsPerFloor: 6,
+    maxRoomsPerFloor: 12,
     minRoomsPerFloor: 1,
     defaultRoomSqft: 500,
     shape: 'rectangle',
+    floorAreaSqft: 1200,
+    plotAreaSqft: 2400,
+    exteriorWallIn: 9,
+    interiorWallIn: 4.5,
+  },
+  site: {
+    plot_width_ft: 0, plot_depth_ft: 0, building_x: 0, building_z: 0,
+    base_width_ft: 0, base_depth_ft: 0, footprint: [], features: [],
   },
   history: [],
   district: getDefaultDistrict(),
@@ -73,12 +133,28 @@ export type BuildingAction =
   | { type: 'SET_RISK'; payload: number | null }
   | { type: 'RESET' };
 
+/** Fill fields an older backend may not send, so the views never crash on them. */
+function normalize(p: BuildingState): BuildingState {
+  return {
+    ...p,
+    constraints: { ...initialState.constraints, ...p.constraints },
+    site: { ...initialState.site, ...p.site },
+    floors: (p.floors ?? []).map(f => ({
+      ...f,
+      shape: f.shape ?? p.constraints?.shape ?? 'rectangle',
+      footprint: f.footprint ?? [],
+      area_sqft: f.area_sqft ?? 0,
+      rooms: (f.rooms ?? []).map(r => ({ ...r, x: r.x ?? null, z: r.z ?? null, windows: r.windows ?? [] })),
+    })),
+  };
+}
+
 // --- Reducer ---
 function buildingReducer(state: BuildingState, action: BuildingAction): BuildingState {
   switch (action.type) {
     case 'SET_STATE':
       // backend BuildingState payloads don't carry district/structuralRisk — preserve them
-      return { ...action.payload, district: action.payload.district ?? state.district, structuralRisk: state.structuralRisk };
+      return { ...normalize(action.payload), district: action.payload.district ?? state.district, structuralRisk: state.structuralRisk };
     case 'SET_DISTRICT':
       return { ...state, district: action.payload };
     case 'SET_RISK':
@@ -98,7 +174,12 @@ function buildingReducer(state: BuildingState, action: BuildingAction): Building
           ...initialState.constraints,
           defaultRoomSqft: state.constraints.defaultRoomSqft,
           shape: state.constraints.shape,
+          floorAreaSqft: state.constraints.floorAreaSqft,
+          plotAreaSqft: state.constraints.plotAreaSqft,
+          exteriorWallIn: state.constraints.exteriorWallIn,
+          interiorWallIn: state.constraints.interiorWallIn,
         },
+        site: { ...state.site, features: [] },
         history: [{ action: 'reset', timestamp: new Date().toISOString(), details: 'Building reset to empty state' }]
       };
     default:
@@ -114,6 +195,19 @@ const BuildingContext = createContext<{
 
 export function BuildingProvider({ children }: { children: ReactNode }) {
   const [state, dispatch] = useReducer(buildingReducer, initialState);
+
+  // Stay in step with the server: adopt its state when a request finds the page
+  // stale, and re-check whenever the user comes back to the tab.
+  useEffect(() => {
+    const off = onServerState(s => dispatch({ type: 'SET_STATE', payload: s }));
+    const refresh = () => {
+      if (document.visibilityState === 'visible') {
+        fetchBuildingState().then(s => dispatch({ type: 'SET_STATE', payload: s })).catch(() => { /* backend offline */ });
+      }
+    };
+    document.addEventListener('visibilitychange', refresh);
+    return () => { off(); document.removeEventListener('visibilitychange', refresh); };
+  }, []);
 
   return (
     <BuildingContext.Provider value={{ state, dispatch }}>

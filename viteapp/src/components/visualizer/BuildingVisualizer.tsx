@@ -1,9 +1,14 @@
-import { useState, useRef, useCallback } from 'react';
-import { RotateCcw, ZoomIn, ZoomOut, Plus, Eye, EyeOff, Layers } from 'lucide-react';
+import { useState, useRef, useCallback, useMemo, useEffect } from 'react';
+import { RotateCcw, ZoomIn, ZoomOut, Plus, Eye, EyeOff, Layers, LayoutGrid, Maximize2, Minimize2, Box, Square } from 'lucide-react';
 import { useBuilding } from '../../context/BuildingContext';
 import { sendMessage } from '../../services/api';
-import { RiskToast } from '../shared/RiskToast';
-import type { Floor, Room } from '../../context/BuildingContext';
+import { DISTRICT_COORDS } from '../../services/liveData';
+import { FloorPlanEditor } from '../planner/FloorPlanEditor';
+import { ROOM_META, SITE_META, roomMeta, insideUnion, overlaps } from '../../utils/rooms';
+import { userWindows } from '../../utils/walls';
+import { placeRoom, updateRoom } from '../../services/api';
+import { useDesign } from '../../context/DesignContext';
+import type { Floor, Room, Rect, SiteFeature, WindowSpec } from '../../context/BuildingContext';
 
 /* ── Palette ── */
 const PALETTE = [
@@ -20,53 +25,20 @@ const PALETTE = [
 ];
 const pc = (i: number) => PALETTE[i % PALETTE.length];
 
-/* ── Room type metadata ── */
-const ROOM_META: Record<string, { symbol: string; color: string; label: string }> = {
-  bedroom:  { symbol: '🛏', color: '#7ecfdf', label: 'BED' },
-  bathroom: { symbol: '🚿', color: '#60a5fa', label: 'BATH' },
-  kitchen:  { symbol: '🍳', color: '#fbbf24', label: 'KIT' },
-  hallway:  { symbol: '🚪', color: '#a3e635', label: 'HALL' },
-  office:   { symbol: '💼', color: '#c084fc', label: 'OFC' },
-  store:    { symbol: '📦', color: '#f97316', label: 'STR' },
-  general:  { symbol: '◻', color: '#94a3b8', label: 'RM' },
-};
-const roomMeta = (room: Room) => ROOM_META[room.type] ?? ROOM_META['general'];
-
-/* ── Building geometry ── */
+/* ── Building geometry ──
+   Plans are in feet; BASE_W px is the width of the ground-floor bounding box
+   and every other dimension scales from it. */
 const BASE_W = 260;
-const BASE_D = 190;
 const FLOOR_H = 64;
 const ROOF_H = 10;
-const SILL_H = 14;      // solid band at the bottom of each façade
 const LINTEL_H = 6;     // solid band at the top of each façade (slab edge)
 const DOOR_W = 14;
 const EXPLODE_GAP = 48; // vertical gap between floors in exploded view
-const EPS = 0.5;
-
-/* ── Satellite ground ── */
-const GROUND_W = BASE_W * 3;
-const GROUND_D = BASE_D * 3;
-const PLOT_W = BASE_W + 60;
-const PLOT_D = BASE_D + 60;
-const ROAD_TOP = (GROUND_D + PLOT_D) / 2 + 12;
 const ROAD_H = 16;
-
-interface TreeSpot { x: number; y: number; r: number }
-const TREE_SPOTS: TreeSpot[] = (() => {
-  const spots: TreeSpot[] = [];
-  const cx = GROUND_W / 2;
-  const cy = GROUND_D / 2;
-  let attempts = 0;
-  while (spots.length < 16 && attempts < 300) {
-    attempts++;
-    const x = Math.random() * GROUND_W;
-    const y = Math.random() * GROUND_D;
-    if (Math.abs(x - cx) < PLOT_W / 2 + 8 && Math.abs(y - cy) < PLOT_D / 2 + 8) continue;
-    if (y > ROAD_TOP - 12 && y < ROAD_TOP + ROAD_H + 12) continue;
-    spots.push({ x, y, r: 8 + Math.random() * 10 });
-  }
-  return spots;
-})();
+const STOREY_FT = 10;               // FLOOR_H represents a 10 ft storey
+const VFT = FLOOR_H / STOREY_FT;    // vertical px per ft
+const PERSPECTIVE = 1400;
+const PLAN_WALL_H = 12;             // walls are cut this low on the floor being planned
 
 /* ── 3D plane helpers ──
    World space: x → right, y → down (ground at y=0, floors stack into −y),
@@ -85,115 +57,218 @@ const wallX = (x: number, yTop: number, z: number, len: number, h: number) =>
 /** Vertical wall in the plane x=const, running along +z. */
 const wallZ = (x: number, yTop: number, z: number, len: number, h: number) =>
   plane(len, h, `translate3d(${x}px,${yTop}px,${z}px) rotateY(-90deg)`);
+/** Card that always faces the camera, centred on a world point. */
+const billboard = (x: number, y: number, z: number, rotX: number, rotY: number): React.CSSProperties => ({
+  position: 'absolute', left: 0, top: 0, transformOrigin: '0 0', pointerEvents: 'none',
+  transform: `translate3d(${x}px,${y}px,${z}px) rotateY(${-rotY}deg) rotateX(${-rotX}deg) translate(-50%,-50%)`,
+});
 
-/* ── Floor-plan layout: area-weighted binary partition (treemap) ── */
-interface RoomRect { room: Room; x: number; z: number; w: number; d: number }
+/* ── Walls from the user's plan ──
+   Rasterise the floor into 1-ft cells (outside / open / room), then every
+   boundary between two different cells is a wall: footprint edges become
+   façades, room edges become partitions. Consecutive edges are merged. */
+type Facing = 'front' | 'back' | 'left' | 'right';
+interface ExtRun { axis: 'x' | 'z'; x: number; z: number; len: number; room: Room | null; facing: Facing }
+interface IntRun { axis: 'x' | 'z'; x: number; z: number; len: number }
 
-function partition(rooms: Room[], x: number, z: number, w: number, d: number): RoomRect[] {
-  if (rooms.length === 0) return [];
-  if (rooms.length === 1) return [{ room: rooms[0], x, z, w, d }];
+function planWalls(footprint: Rect[], rooms: Room[], W: number, D: number) {
+  const placed = rooms.filter(r => r.x !== null && r.z !== null);
+  const grid = new Int16Array(W * D).fill(-1);
+  for (const p of footprint)
+    for (let z = p.z; z < p.z + p.d; z++) for (let x = p.x; x < p.x + p.w; x++) grid[z * W + x] = 0;
+  placed.forEach((r, i) => {
+    for (let z = r.z!; z < r.z! + r.d; z++) for (let x = r.x!; x < r.x! + r.w; x++)
+      if (x >= 0 && x < W && z >= 0 && z < D && grid[z * W + x] >= 0) grid[z * W + x] = i + 1;
+  });
+  const cell = (x: number, z: number) => (x < 0 || z < 0 || x >= W || z >= D ? -1 : grid[z * W + x]);
 
-  const areas = rooms.map(r => Math.max(r.area_sqft || 0, 40));
-  const total = areas.reduce((a, b) => a + b, 0);
-  let acc = 0, split = 1, bestDiff = Infinity;
-  for (let i = 1; i < rooms.length; i++) {
-    acc += areas[i - 1];
-    const diff = Math.abs(acc - total / 2);
-    if (diff < bestDiff) { bestDiff = diff; split = i; }
-  }
-  const ratio = areas.slice(0, split).reduce((a, b) => a + b, 0) / total;
-  const first = rooms.slice(0, split);
-  const rest = rooms.slice(split);
-
-  if (w >= d) {
-    const w1 = w * ratio;
-    return [...partition(first, x, z, w1, d), ...partition(rest, x + w1, z, w - w1, d)];
-  }
-  const d1 = d * ratio;
-  return [...partition(first, x, z, w, d1), ...partition(rest, x, z + d1, w, d - d1)];
+  const ext: ExtRun[] = [];
+  const int: IntRun[] = [];
+  // Scan one grid line; `pair(t)` returns the cells on either side at position t.
+  const scan = (axis: 'x' | 'z', c: number, n: number, pair: (t: number) => [number, number]) => {
+    let key = '', start = 0;
+    const flush = (end: number) => {
+      if (!key) return;
+      const len = end - start;
+      const [x, z] = axis === 'x' ? [start, c] : [c, start];
+      if (key.startsWith('e')) {
+        const [, facing, owner] = key.split(':');
+        ext.push({ axis, x, z, len, facing: facing as Facing, room: +owner > 0 ? placed[+owner - 1] : null });
+      } else int.push({ axis, x, z, len });
+    };
+    for (let t = 0; t <= n; t++) {
+      let k = '';
+      if (t < n) {
+        const [a, b] = pair(t);
+        if ((a < 0) !== (b < 0)) {
+          const facing = axis === 'x' ? (a >= 0 ? 'front' : 'back') : (a >= 0 ? 'right' : 'left');
+          k = `e:${facing}:${a >= 0 ? a : b}`;
+        } else if (a >= 0 && a !== b) k = `i:${Math.min(a, b)}-${Math.max(a, b)}`;
+      }
+      if (k !== key) { flush(t); key = k; start = t; }
+    }
+  };
+  for (let z = 0; z <= D; z++) scan('x', z, W, x => [cell(x, z - 1), cell(x, z)]);
+  for (let x = 0; x <= W; x++) scan('z', x, D, z => [cell(x - 1, z), cell(x, z)]);
+  return { ext, int, placed };
 }
 
-function layoutRooms(rooms: Room[], W: number, D: number): RoomRect[] {
-  const sorted = [...rooms].sort((a, b) => (b.area_sqft || 0) - (a.area_sqft || 0));
-  return partition(sorted, 0, 0, W, D);
+const FACING_LIGHT: Record<Facing, number> = { front: 1, right: 0.85, left: 0.7, back: 0.6 };
+
+/** Where the main entrance goes: a front-facing ground-floor wall, preferring the hallway / living room. */
+function entrance(ext: ExtRun[]): ExtRun | null {
+  const front = ext.filter(r => r.facing === 'front');
+  if (front.length === 0) return null;
+  return front.find(r => r.room?.type === 'hallway') ?? front.find(r => r.room?.type === 'living')
+    ?? front.reduce((a, b) => (b.len > a.len ? b : a));
 }
 
-/** Interior partitions: each rect's right / front edge, unless it is on the exterior. */
-function interiorWalls(rects: RoomRect[], W: number, D: number) {
-  const walls: { axis: 'x' | 'z'; x: number; z: number; len: number }[] = [];
-  for (const r of rects) {
-    if (r.x + r.w < W - EPS) walls.push({ axis: 'z', x: r.x + r.w, z: r.z, len: r.d });
-    if (r.z + r.d < D - EPS) walls.push({ axis: 'x', x: r.x, z: r.z + r.d, len: r.w });
-  }
-  return walls;
-}
-
-/* ── Façades ── each maps the rooms touching it to [start, end] spans in the
-   wall's own left-to-right coordinate (as seen from outside). */
-type FacadeKey = 'front' | 'right' | 'back' | 'left';
-interface Span { room: Room; start: number; end: number }
-
-function facadeSpans(rects: RoomRect[], key: FacadeKey, W: number, D: number): Span[] {
-  const spans: Span[] = [];
-  for (const r of rects) {
-    if (key === 'front' && Math.abs(r.z + r.d - D) < EPS) spans.push({ room: r.room, start: r.x, end: r.x + r.w });
-    if (key === 'back' && r.z < EPS) spans.push({ room: r.room, start: W - r.x - r.w, end: W - r.x });
-    if (key === 'left' && r.x < EPS) spans.push({ room: r.room, start: r.z, end: r.z + r.d });
-    if (key === 'right' && Math.abs(r.x + r.w - W) < EPS) spans.push({ room: r.room, start: D - r.z - r.d, end: D - r.z });
-  }
-  return spans.sort((a, b) => a.start - b.start);
-}
-
-/** Where the main entrance goes on the ground-floor front façade (x position of the door centre). */
-function entranceX(rects: RoomRect[], W: number, D: number): number {
-  const spans = facadeSpans(rects, 'front', W, D);
-  if (spans.length === 0) return W / 2;
-  const hall = spans.find(s => s.room.type === 'hallway');
-  const pick = hall ?? spans.reduce((a, b) => (b.end - b.start > a.end - a.start ? b : a));
-  return (pick.start + pick.end) / 2;
-}
-
-const floorScale = (shape: string, index: number) => (shape === 'pyramid' ? Math.pow(0.82, index) : 1);
-
-/* ── Façade wall: solid sill + lintel, one glazed bay per room behind it ── */
-function Facade({ facade, W, D, H, spans, colors, light, children }: {
-  facade: FacadeKey; W: number; D: number; H: number; spans: Span[];
-  colors: ReturnType<typeof pc>; light: number; children?: React.ReactNode;
+/* ── Façade segment: plaster wall with framed windows ── */
+function FacadeRun({ run, k, H, colors, windows, hasDoor, children }: {
+  run: ExtRun; k: number; H: number; colors: ReturnType<typeof pc>; windows: WindowSpec | null; hasDoor: boolean; children?: React.ReactNode;
 }) {
-  const len = facade === 'front' || facade === 'back' ? W : D;
-  const transform = {
-    front: `translate3d(0px,${-H}px,${D}px)`,
-    right: `translate3d(${W}px,${-H}px,${D}px) rotateY(90deg)`,
-    back:  `translate3d(${W}px,${-H}px,0px) rotateY(180deg)`,
-    left:  `translate3d(0px,${-H}px,0px) rotateY(-90deg)`,
-  }[facade];
-  const bays = spans.length > 0 ? spans : [{ room: null, start: 0, end: len }];
-
+  const len = run.len * k;
+  const pos = run.axis === 'x' ? wallX(run.x * k, -H, run.z * k, len, H) : wallZ(run.x * k, -H, run.z * k, len, H);
+  const tint = run.room ? roomMeta(run.room.type).color : colors.label;
+  const n = windows?.count ?? 0;
+  // Windows share the wall evenly; on the entrance wall they go either side of the door
+  const spans: [number, number][] = hasDoor ? [[0, len / 2 - 16], [len / 2 + 16, len]] : [[0, len]];
+  const perSpan = hasDoor ? [Math.ceil(n / 2), Math.floor(n / 2)] : [n];
+  const ww = Math.min((windows?.width_ft ?? 0) * k, Math.min(...spans.map(([a, b], i) => (b - a) / Math.max(perSpan[i], 1) - 4)));
+  const lefts = spans.flatMap(([a, b], i) => {
+    const m = perSpan[i];
+    const gap = (b - a - m * ww) / (m + 1);
+    return Array.from({ length: m }, (_, j) => a + gap + j * (ww + gap));
+  });
+  const high = run.room?.type === 'bathroom';                 // ventilators sit high
+  const wh = Math.min((windows?.height_ft ?? 0) * VFT, H - LINTEL_H - 8);
+  const bottom = high ? H - LINTEL_H - 4 - wh : Math.min(3 * VFT, H - LINTEL_H - 4 - wh);
   return (
     <div style={{
-      ...plane(len, H, transform),
-      background: `linear-gradient(180deg, ${colors.top} 0 ${LINTEL_H}px, transparent ${LINTEL_H}px calc(100% - ${SILL_H}px), ${colors.front} calc(100% - ${SILL_H}px))`,
+      ...pos,
+      background: `linear-gradient(180deg, ${colors.top} 0 ${LINTEL_H}px, ${colors.front} ${LINTEL_H}px calc(100% - 4px), ${colors.bottom} calc(100% - 4px))`,
       borderLeft: `2px solid ${colors.side}`,
       borderRight: `2px solid ${colors.side}`,
-      filter: `brightness(${light})`,
+      filter: `brightness(${FACING_LIGHT[run.facing]})`,
     }}>
-      {bays.map((b, i) => {
-        const tint = b.room ? roomMeta(b.room).color : colors.label;
-        return (
-          <div key={b.room?.id ?? i} style={{
-            position: 'absolute', top: `${LINTEL_H}px`, bottom: `${SILL_H}px`,
-            left: `${b.start}px`, width: `${b.end - b.start}px`,
-            background: `linear-gradient(160deg, ${tint}38, ${tint}12 60%, ${tint}26)`,
-            borderLeft: `2px solid ${colors.side}`, borderRight: `2px solid ${colors.side}`,
-            boxSizing: 'border-box',
-          }}>
-            {/* transom */}
-            <div style={{ position: 'absolute', left: 0, right: 0, top: '30%', height: '1px', background: `${tint}70` }} />
-          </div>
-        );
-      })}
+      {ww > 2 && lefts.map((left, i) => (
+        <div key={i} style={{
+          position: 'absolute', left: `${left}px`, bottom: `${bottom}px`, width: `${ww}px`, height: `${wh}px`,
+          boxSizing: 'border-box', border: '1.5px solid #e2e8f0', borderRadius: '1px',
+          background: `linear-gradient(135deg, rgba(224,242,254,0.75) 0%, rgba(125,211,252,0.45) 35%, ${tint}55 60%, rgba(14,116,144,0.6) 100%)`,
+          boxShadow: '0 1px 0 #94a3b8, inset 0 0 4px rgba(255,255,255,0.35)',
+        }}>
+          {/* mullion + transom */}
+          {ww > 10 && <div style={{ position: 'absolute', top: 0, bottom: 0, left: '50%', width: '1px', background: '#e2e8f0' }} />}
+          {wh > 14 && <div style={{ position: 'absolute', left: 0, right: 0, top: '32%', height: '1px', background: '#e2e8f0' }} />}
+          {/* sill ledge */}
+          <div style={{ position: 'absolute', left: '-2px', right: '-2px', bottom: '-3px', height: '2px', background: '#cbd5e1' }} />
+        </div>
+      ))}
       {children}
     </div>
+  );
+}
+
+/** Windows to draw on each exterior run — only those the user added, all on the room's longest run for that side. */
+function windowsByRun(ext: ExtRun[]): Map<ExtRun, WindowSpec | null> {
+  const out = new Map<ExtRun, WindowSpec | null>();
+  const groups = new Map<string, ExtRun[]>();
+  for (const r of ext) {
+    if (!r.room) continue;
+    const key = `${r.room.id}:${r.facing}`;
+    groups.set(key, [...(groups.get(key) ?? []), r]);
+  }
+  for (const runs of groups.values()) {
+    const main = runs.reduce((a, b) => (b.len > a.len ? b : a));
+    const spec = userWindows(main.room!, main.facing) ?? null;
+    for (const r of runs) out.set(r, r === main ? spec : null);
+  }
+  return out;
+}
+
+/**
+ * A wall's thickness made visible: the inner face (a second plane `t` px inside
+ * the outer one) and the cap on top. `inward` is the side the building is on.
+ */
+function WallBody({ axis, x, z, len, t, H, inward, cap, face, pulse }: {
+  axis: 'x' | 'z'; x: number; z: number; len: number; t: number; H: number; inward: -1 | 0 | 1;
+  cap: string; face: string | null; pulse: number;
+}) {
+  const off = inward === 1 ? 0 : inward === -1 ? -t : -t / 2;
+  const anim = pulse ? { animation: 'wallPulse 0.9s ease-in-out 3' } : {};
+  const capStyle = axis === 'x' ? flat(x, -H, z + off, len, t) : flat(x + off, -H, z, t, len);
+  const inner = inward === 0 ? null : axis === 'x' ? wallX(x, -H, z + inward * t, len, H) : wallZ(x + inward * t, -H, z, len, H);
+  return (
+    <>
+      <div key={`c${pulse}`} style={{ ...capStyle, background: cap, ...anim }} />
+      {inner && face && <div key={`f${pulse}`} style={{ ...inner, background: face, ...anim }} />}
+    </>
+  );
+}
+
+/* ── Sloped faces (pyramid floors) ──
+   A plane through world point O whose local x runs along U and local y along V
+   (both unit vectors), so any tilted face can be placed exactly, then cut to
+   a trapezoid / triangle with clip-path. */
+type V3 = [number, number, number];
+const norm = (v: V3): V3 => { const l = Math.hypot(...v) || 1; return [v[0] / l, v[1] / l, v[2] / l]; };
+const cross = (a: V3, b: V3): V3 => [a[1] * b[2] - a[2] * b[1], a[2] * b[0] - a[0] * b[2], a[0] * b[1] - a[1] * b[0]];
+function slopedFace(O: V3, U: V3, V: V3, w: number, h: number, clip: string): React.CSSProperties {
+  const u = norm(U), v = norm(V), n = norm(cross(u, v));
+  return {
+    position: 'absolute', left: 0, top: 0, width: `${w}px`, height: `${h}px`, transformOrigin: '0 0',
+    transform: `matrix3d(${u.join(',')},0,${v.join(',')},0,${n.join(',')},0,${O.join(',')},1)`,
+    clipPath: clip,
+  };
+}
+
+const PYRAMID_STEP = 0.075; // each side steps in 7.5% per pyramid floor (matches the backend's 0.85 taper)
+
+/** A pyramid storey: four glazed faces sloping in from the footprint to a smaller top. */
+function PyramidShell({ fp, k, H, colors }: { fp: Rect[]; k: number; H: number; colors: ReturnType<typeof pc> }) {
+  const x0 = Math.min(...fp.map(p => p.x)) * k, z0 = Math.min(...fp.map(p => p.z)) * k;
+  const x1 = Math.max(...fp.map(p => p.x + p.w)) * k, z1 = Math.max(...fp.map(p => p.z + p.d)) * k;
+  const W = x1 - x0, D = z1 - z0, sx = W * PYRAMID_STEP, sz = D * PYRAMID_STEP;
+  const Lf = Math.hypot(H, sz), Ls = Math.hypot(H, sx);
+  const glass = (light: number): React.CSSProperties => ({
+    background: `repeating-linear-gradient(90deg, rgba(226,232,240,0.55) 0 1px, transparent 1px 22px),
+                 repeating-linear-gradient(0deg, rgba(226,232,240,0.45) 0 1px, transparent 1px 16px),
+                 linear-gradient(180deg, ${colors.top}, ${colors.front})`,
+    filter: `brightness(${light})`, opacity: 0.92,
+  });
+  return (
+    <>
+      <div style={{ ...slopedFace([x0, -H, z1 - sz], [1, 0, 0], [0, H, sz], W, Lf, `polygon(${sx}px 0, ${W - sx}px 0, 100% 100%, 0 100%)`), ...glass(1) }} />
+      <div style={{ ...slopedFace([x0, -H, z0 + sz], [1, 0, 0], [0, H, -sz], W, Lf, `polygon(${sx}px 0, ${W - sx}px 0, 100% 100%, 0 100%)`), ...glass(0.6) }} />
+      <div style={{ ...slopedFace([x0 + sx, -H, z0], [0, 0, 1], [-sx, H, 0], D, Ls, `polygon(${sz}px 0, ${D - sz}px 0, 100% 100%, 0 100%)`), ...glass(0.7) }} />
+      <div style={{ ...slopedFace([x1 - sx, -H, z0], [0, 0, 1], [sx, H, 0], D, Ls, `polygon(${sz}px 0, ${D - sz}px 0, 100% 100%, 0 100%)`), ...glass(0.85) }} />
+    </>
+  );
+}
+
+/** Pointed cap on a top-floor pyramid: four triangles meeting at the apex. */
+function PyramidRoof({ fp, k, H, colors }: { fp: Rect[]; k: number; H: number; colors: ReturnType<typeof pc> }) {
+  const bx0 = Math.min(...fp.map(p => p.x)) * k, bz0 = Math.min(...fp.map(p => p.z)) * k;
+  const bx1 = Math.max(...fp.map(p => p.x + p.w)) * k, bz1 = Math.max(...fp.map(p => p.z + p.d)) * k;
+  const sx = (bx1 - bx0) * PYRAMID_STEP, sz = (bz1 - bz0) * PYRAMID_STEP;
+  const x0 = bx0 + sx, x1 = bx1 - sx, z0 = bz0 + sz, z1 = bz1 - sz;   // top of the sloped storey
+  const W = x1 - x0, D = z1 - z0, cx = (x0 + x1) / 2, cz = (z0 + z1) / 2;
+  const P = Math.min(W, D) * 0.55;                                     // apex height
+  const top = -H - P;
+  const Lf = Math.hypot(P, D / 2), Ls = Math.hypot(P, W / 2);
+  const tri = 'polygon(50% 0, 100% 100%, 0 100%)';
+  const skin = (light: number): React.CSSProperties => ({
+    background: `repeating-linear-gradient(0deg, rgba(255,255,255,0.18) 0 1px, transparent 1px 10px), linear-gradient(180deg, ${colors.label}, ${colors.top})`,
+    filter: `brightness(${light})`,
+  });
+  return (
+    <>
+      <div style={{ ...slopedFace([x0, top, cz], [1, 0, 0], [0, P, D / 2], W, Lf, tri), ...skin(1) }} />
+      <div style={{ ...slopedFace([x0, top, cz], [1, 0, 0], [0, P, -D / 2], W, Lf, tri), ...skin(0.6) }} />
+      <div style={{ ...slopedFace([cx, top, z0], [0, 0, 1], [-W / 2, P, 0], D, Ls, tri), ...skin(0.7) }} />
+      <div style={{ ...slopedFace([cx, top, z0], [0, 0, 1], [W / 2, P, 0], D, Ls, tri), ...skin(0.85) }} />
+    </>
   );
 }
 
@@ -219,102 +294,138 @@ function Partition({ len, H }: { len: number; H: number }) {
 interface FloorBlockProps {
   floor: Floor;
   index: number;
-  shape: string;
+  isTop: boolean;   // topmost visible floor — its room labels show
+  plan: boolean;    // floor-plan mode: low cut walls, light gridded slab, labelled room tiles
+  pointedRoof: boolean; // top-floor pyramid gets an apex instead of a flat roof
+  wallsPulse: number;
+  wallLabel: string;
+  extT: number;     // wall thickness, px
+  intT: number;
+  k: number;        // px per ft
+  W: number;        // base bbox, ft
+  D: number;
   showLabels: boolean;
   y: number;        // world y of this floor's slab
   rotX: number;
   rotY: number;
 }
 
-function FloorBlock({ floor, index, shape, showLabels, y, rotX, rotY }: FloorBlockProps) {
+function FloorBlock({ floor, index, isTop, plan, pointedRoof, wallsPulse, wallLabel, extT, intT, k, W, D, showLabels, y, rotX, rotY }: FloorBlockProps) {
   const colors = pc(index);
-  const scale = floorScale(shape, index);
-  const W = BASE_W * scale;
-  const D = BASE_D * scale;
-  const H = FLOOR_H;
-  const rects = layoutRooms(floor.rooms, W, D);
-  const partitions = interiorWalls(rects, W, D);
-  const doorX = index === 0 ? entranceX(rects, W, D) : null;
+  const H = plan ? PLAN_WALL_H : FLOOR_H;
+  const grid = 5 * k; // 5-ft grid on the slab in plan mode
+  const sloped = floor.shape === 'pyramid' && !plan && floor.footprint.length > 0;
+  const partH = sloped ? H * 0.6 : H; // keep partitions inside the sloping walls
+  const { ext, int, placed } = useMemo(() => planWalls(floor.footprint, floor.rooms, W, D), [floor.footprint, floor.rooms, W, D]);
+  const door = index === 0 ? entrance(ext) : null;
+  const windows = useMemo(() => windowsByRun(ext), [ext]);
+  const labelRun = ext.filter(r => r.facing === 'front').reduce<ExtRun | null>((a, b) => (!a || b.len > a.len ? b : a), null);
 
   return (
     <div style={{
       position: 'absolute', left: 0, top: 0,
       transformStyle: 'preserve-3d', transformOrigin: '0 0',
-      transform: `translate3d(${(BASE_W - W) / 2}px,${y}px,${(BASE_D - D) / 2}px)`,
+      transform: `translate3d(0px,${y}px,0px)`,
       transition: 'transform 0.5s cubic-bezier(0.34,1.56,0.64,1)',
     }}>
       {/* Floor slab */}
-      <div style={{
-        ...flat(0, 0, 0, W, D),
-        background: `linear-gradient(135deg, #39424d, #222830)`,
-        border: `2px solid ${colors.top}`,
-      }} />
+      {floor.footprint.map((p, i) => (
+        <div key={i} style={{
+          ...flat(p.x * k, 0, p.z * k, p.w * k, p.d * k),
+          background: plan
+            ? `linear-gradient(rgba(15,23,42,0.16) 1px, transparent 1px) ${-p.x * k}px ${-p.z * k}px / ${grid}px ${grid}px,
+               linear-gradient(90deg, rgba(15,23,42,0.16) 1px, transparent 1px) ${-p.x * k}px ${-p.z * k}px / ${grid}px ${grid}px,
+               #dfe6ee`
+            : `linear-gradient(135deg, #39424d, #222830)`,
+        }} />
+      ))}
 
-      {/* Room floors — area-proportional plan */}
-      {rects.map(r => {
-        const meta = roomMeta(r.room);
+      {/* Room floors — exactly where the user placed them */}
+      {placed.map(r => {
+        const meta = roomMeta(r.type);
         return (
-          <div key={r.room.id} title={`${r.room.name} · ${r.room.type} · ${r.room.area_sqft} sqft`} style={{
-            ...flat(r.x + 2, -0.6, r.z + 2, Math.max(r.w - 4, 1), Math.max(r.d - 4, 1)),
-            background: `repeating-linear-gradient(45deg, ${meta.color}2a 0 6px, ${meta.color}1a 6px 12px)`,
-            border: `1px solid ${meta.color}90`,
+          <div key={r.id} title={`${r.name} · ${r.type} · ${r.area_sqft} sqft`} style={{
+            ...flat(r.x! * k + 1, -0.6, r.z! * k + 1, Math.max(r.w * k - 2, 1), Math.max(r.d * k - 2, 1)),
+            background: plan ? `${meta.color}b0` : `repeating-linear-gradient(45deg, ${meta.color}2a 0 6px, ${meta.color}1a 6px 12px)`,
+            border: plan ? `2px solid ${meta.color}` : `1px solid ${meta.color}90`,
             borderRadius: '2px',
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', overflow: 'hidden',
           }}>
-            <span style={{ fontSize: `${Math.min(18, Math.min(r.w, r.d) * 0.35)}px`, opacity: 0.55 }}>{meta.symbol}</span>
+            {plan ? (
+              // Name painted on the floor, so the top view reads like a plan drawing
+              <div style={{ textAlign: 'center', color: '#0f172a', lineHeight: 1.15, maxWidth: '100%', padding: '0 2px', fontSize: `${Math.max(5, Math.min(8, r.w * k * 0.09))}px` }}>
+                <div style={{ fontWeight: 800, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{meta.symbol} {r.name}</div>
+                <div style={{ fontWeight: 600, opacity: 0.8 }}>{r.w}×{r.d} ft</div>
+              </div>
+            ) : (
+              <span style={{ fontSize: `${Math.min(18, Math.min(r.w, r.d) * k * 0.35)}px`, opacity: 0.55 }}>{meta.symbol}</span>
+            )}
           </div>
         );
       })}
 
       {/* Interior partitions */}
-      {partitions.map((p, i) => (
-        <div key={i} style={p.axis === 'x' ? wallX(p.x, -H, p.z, p.len, H) : wallZ(p.x, -H, p.z, p.len, H)}>
-          <Partition len={p.len} H={H} />
+      {int.map((p, i) => (
+        <div key={i} style={p.axis === 'x' ? wallX(p.x * k, -partH, p.z * k, p.len * k, partH) : wallZ(p.x * k, -partH, p.z * k, p.len * k, partH)}>
+          <Partition len={p.len * k} H={partH} />
         </div>
       ))}
 
-      {/* Exterior façades */}
-      <Facade facade="back" W={W} D={D} H={H} spans={facadeSpans(rects, 'back', W, D)} colors={colors} light={0.6} />
-      <Facade facade="left" W={W} D={D} H={H} spans={facadeSpans(rects, 'left', W, D)} colors={colors} light={0.7} />
-      <Facade facade="right" W={W} D={D} H={H} spans={facadeSpans(rects, 'right', W, D)} colors={colors} light={0.85} />
-      <Facade facade="front" W={W} D={D} H={H} spans={facadeSpans(rects, 'front', W, D)} colors={colors} light={1}>
-        {showLabels && (
-          <span style={{
-            position: 'absolute', bottom: '3px', left: '8px',
-            fontSize: '0.45rem', fontWeight: 800, letterSpacing: '0.12em', lineHeight: 1,
-            color: colors.label, textShadow: `0 0 6px ${colors.label}80`, whiteSpace: 'nowrap',
-          }}>
-            FLOOR {String(floor.number).padStart(2, '0')} · {floor.rooms.length} {floor.rooms.length === 1 ? 'ROOM' : 'ROOMS'}
-          </span>
-        )}
-        {doorX !== null && (
-          <div style={{
-            position: 'absolute', bottom: 0, left: `${doorX - 10}px`, width: '20px', height: `${H * 0.62}px`,
-            background: 'linear-gradient(180deg, #6b4423, #432910)',
-            border: '1px solid #2a1a0a', borderRadius: '2px 2px 0 0',
-          }}>
-            <div style={{ position: 'absolute', right: '3px', top: '50%', width: '3px', height: '3px', borderRadius: '50%', background: '#d4a86a' }} />
-          </div>
-        )}
-      </Facade>
+      {/* Pyramid storey: sloped glazed faces (and an apex on top) instead of upright façades */}
+      {sloped && <PyramidShell fp={floor.footprint} k={k} H={H} colors={colors} />}
+      {sloped && pointedRoof && <PyramidRoof fp={floor.footprint} k={k} H={H} colors={colors} />}
 
-      {/* Room labels — billboards that always face the camera */}
-      {showLabels && rects.map(r => {
-        const meta = roomMeta(r.room);
+      {/* Exterior façades */}
+      {!sloped && ext.map((run, i) => (
+        <FacadeRun key={i} run={run} k={k} H={H} colors={colors} windows={plan ? null : windows.get(run) ?? null} hasDoor={run === door}>
+          {showLabels && !plan && run === labelRun && (
+            <span style={{
+              position: 'absolute', bottom: '3px', left: '8px',
+              fontSize: '0.45rem', fontWeight: 800, letterSpacing: '0.12em', lineHeight: 1,
+              color: colors.label, textShadow: `0 0 6px ${colors.label}80`, whiteSpace: 'nowrap',
+            }}>
+              FLOOR {String(floor.number).padStart(2, '0')} · {floor.rooms.length} {floor.rooms.length === 1 ? 'ROOM' : 'ROOMS'} · WALLS {wallLabel}
+            </span>
+          )}
+          {run === door && !plan && (
+            <div style={{
+              position: 'absolute', bottom: 0, left: `${(run.len * k) / 2 - 10}px`, width: '20px', height: `${H * 0.62}px`,
+              background: 'linear-gradient(180deg, #6b4423, #432910)',
+              border: '1px solid #2a1a0a', borderRadius: '2px 2px 0 0',
+            }}>
+              <div style={{ position: 'absolute', right: '3px', top: '50%', width: '3px', height: '3px', borderRadius: '50%', background: '#d4a86a' }} />
+            </div>
+          )}
+        </FacadeRun>
+      ))}
+
+      {/* Wall thickness — inner faces and caps (flash when the user changes it) */}
+      {!sloped && ext.map((run, i) => (
+        <WallBody key={`we${i}`} axis={run.axis} x={run.x * k} z={run.z * k} len={run.len * k} t={extT} H={H}
+          inward={run.facing === 'front' || run.facing === 'right' ? -1 : 1}
+          cap="linear-gradient(90deg,#d6d3d1,#a8a29e)" face="linear-gradient(180deg,#e7e5e4,#c4c0bc)" pulse={wallsPulse} />
+      ))}
+      {int.map((p, i) => (
+        <WallBody key={`wi${i}`} axis={p.axis} x={p.x * k} z={p.z * k} len={p.len * k} t={intT} H={H} inward={0}
+          cap="#e2e8f0" face={null} pulse={wallsPulse} />
+      ))}
+
+      {/* Room labels — float above the walls of the floor you're looking at */}
+      {showLabels && isTop && !plan && placed.map(r => {
+        const meta = roomMeta(r.type);
         return (
-          <div key={`lbl-${r.room.id}`} style={{
-            position: 'absolute', left: 0, top: 0, transformOrigin: '0 0', pointerEvents: 'none',
-            transform: `translate3d(${r.x + r.w / 2}px,${-H * 0.45}px,${r.z + r.d / 2}px) rotateY(${-rotY}deg) rotateX(${-rotX}deg) translate(-50%,-50%)`,
-            background: 'rgba(10,14,22,0.82)',
-            borderLeft: `2px solid ${meta.color}`,
-            borderRadius: '3px', padding: '2px 4px',
+          <div key={`lbl-${r.id}`} style={{
+            ...billboard((r.x! + r.w / 2) * k, -H - 14, (r.z! + r.d / 2) * k, rotX, rotY),
+            background: 'rgba(10,14,22,0.9)',
+            borderLeft: `3px solid ${meta.color}`,
+            borderRadius: '4px', padding: '3px 6px',
             whiteSpace: 'nowrap', lineHeight: 1.15,
           }}>
-            <div style={{ fontSize: '7px', fontWeight: 700, color: '#e2e8f0', maxWidth: `${Math.max(r.w, 40)}px`, overflow: 'hidden', textOverflow: 'ellipsis' }}>
-              {meta.symbol} {r.room.name}
+            <div style={{ fontSize: '9px', fontWeight: 800, color: '#f1f5f9' }}>
+              {meta.symbol} {r.name}
             </div>
-            <div style={{ fontSize: '6px', fontWeight: 600, color: meta.color, letterSpacing: '0.05em' }}>
-              {meta.label} · {r.room.area_sqft} SQFT
+            <div style={{ fontSize: '7px', fontWeight: 700, color: meta.color, letterSpacing: '0.05em' }}>
+              {r.w}×{r.d} FT · {r.area_sqft} SQFT
             </div>
           </div>
         );
@@ -323,38 +434,128 @@ function FloorBlock({ floor, index, shape, showLabels, y, rotX, rotY }: FloorBlo
   );
 }
 
-/* ── Roof terrace with parapet, sitting on the top floor ── */
-function RoofCap({ totalFloors, shape, y }: { totalFloors: number; shape: string; y: number }) {
-  const scale = floorScale(shape, totalFloors - 1);
-  const W = BASE_W * scale;
-  const D = BASE_D * scale;
-  const parapet = (light: number): React.CSSProperties => ({
-    background: 'linear-gradient(180deg, #6b747e, #3f464d)',
-    border: '1px solid rgba(0,0,0,0.3)',
-    filter: `brightness(${light})`,
-  });
-
+/* ── Roof terrace with parapet, following the top floor's outline ── */
+function RoofCap({ floor, k, W, D, y }: { floor: Floor; k: number; W: number; D: number; y: number }) {
+  const { ext } = useMemo(() => planWalls(floor.footprint, [], W, D), [floor.footprint, W, D]);
   return (
     <div style={{
       position: 'absolute', left: 0, top: 0,
       transformStyle: 'preserve-3d', transformOrigin: '0 0',
-      transform: `translate3d(${(BASE_W - W) / 2}px,${y}px,${(BASE_D - D) / 2}px)`,
+      transform: `translate3d(0px,${y}px,0px)`,
       transition: 'transform 0.5s cubic-bezier(0.34,1.56,0.64,1)',
     }}>
-      <div style={{
-        ...flat(0, 0, 0, W, D),
-        background: 'linear-gradient(135deg, #8a94a0, #5c6670)',
-        border: '1px solid rgba(255,255,255,0.15)',
-        boxShadow: 'inset 0 0 16px rgba(0,0,0,0.3)',
-      }}>
-        <div style={{ position: 'absolute', inset: '6px', border: '1px dashed rgba(255,255,255,0.22)' }} />
-      </div>
-      <div style={{ ...wallX(0, -ROOF_H, D, W, ROOF_H), ...parapet(1) }} />
-      <div style={{ ...wallX(0, -ROOF_H, 0, W, ROOF_H), ...parapet(0.6) }} />
-      <div style={{ ...wallZ(0, -ROOF_H, 0, D, ROOF_H), ...parapet(0.7) }} />
-      <div style={{ ...wallZ(W, -ROOF_H, 0, D, ROOF_H), ...parapet(0.85) }} />
+      {floor.footprint.map((p, i) => (
+        <div key={i} style={{
+          ...flat(p.x * k, 0, p.z * k, p.w * k, p.d * k),
+          background: 'linear-gradient(135deg, #8a94a0, #5c6670)',
+          boxShadow: 'inset 0 0 16px rgba(0,0,0,0.3)',
+        }} />
+      ))}
+      {ext.map((run, i) => (
+        <div key={i} style={{
+          ...(run.axis === 'x' ? wallX(run.x * k, -ROOF_H, run.z * k, run.len * k, ROOF_H) : wallZ(run.x * k, -ROOF_H, run.z * k, run.len * k, ROOF_H)),
+          background: 'linear-gradient(180deg, #6b747e, #3f464d)',
+          border: '1px solid rgba(0,0,0,0.3)',
+          filter: `brightness(${FACING_LIGHT[run.facing]})`,
+        }} />
+      ))}
     </div>
   );
+}
+
+/* ── Parking & gardens, placed on the plot by the user ── */
+const CAR_COLORS = ['#dc2626', '#e5e7eb', '#2563eb', '#111827', '#a3a3a3', '#ca8a04'];
+
+function CarBox({ x, z, along, color, k }: { x: number; z: number; along: 'x' | 'z'; color: string; k: number }) {
+  // A ~6 × 11 ft car, nose pointing along `along`
+  const [w, d] = along === 'z' ? [6 * k, 11 * k] : [11 * k, 6 * k];
+  const h = 9;
+  const side = (light: number): React.CSSProperties => ({ background: color, filter: `brightness(${light})` });
+  return (
+    <>
+      <div style={{ ...flat(x, -h, z, w, d), ...side(1.15), borderRadius: '2px' }}>
+        <div style={{ position: 'absolute', inset: '25%', background: 'rgba(30,41,59,0.75)', borderRadius: '1px' }} />
+      </div>
+      <div style={{ ...wallX(x, -h, z + d, w, h), ...side(0.9) }} />
+      <div style={{ ...wallX(x, -h, z, w, h), ...side(0.6) }} />
+      <div style={{ ...wallZ(x, -h, z, d, h), ...side(0.7) }} />
+      <div style={{ ...wallZ(x + w, -h, z, d, h), ...side(0.8) }} />
+    </>
+  );
+}
+
+function SiteFeatureView({ f, k, ox, oz, rotX, rotY, showLabels }: {
+  f: SiteFeature; k: number; ox: number; oz: number; rotX: number; rotY: number; showLabels: boolean;
+}) {
+  const x = (f.x - ox) * k, z = (f.z - oz) * k, w = f.w * k, d = f.d * k;
+  const meta = SITE_META[f.type];
+  const label = showLabels && (
+    <div style={{
+      ...billboard(x + w / 2, -18, z + d / 2, rotX, rotY),
+      background: 'rgba(10,14,22,0.82)', borderLeft: `2px solid ${meta.color}`, borderRadius: '3px',
+      padding: '2px 4px', whiteSpace: 'nowrap', fontSize: '6px', fontWeight: 700, color: '#e2e8f0',
+    }}>
+      {meta.symbol} {f.name} · {f.area_sqft} SQFT
+    </div>
+  );
+
+  if (f.type === 'parking') {
+    const along: 'x' | 'z' = f.w >= f.d ? 'x' : 'z';        // row of stalls runs along the long side
+    const stallFt = 9;
+    const stalls = Math.floor((along === 'x' ? f.w : f.d) / stallFt);
+    const fitsCar = (along === 'x' ? f.d : f.w) >= 12;
+    return (
+      <>
+        <div style={{
+          ...flat(x, -0.4, z, w, d),
+          background: along === 'x'
+            ? `repeating-linear-gradient(90deg, #3f3f46 0 ${stallFt * k - 1}px, #e5e7eb ${stallFt * k - 1}px ${stallFt * k}px), #3f3f46`
+            : `repeating-linear-gradient(180deg, #3f3f46 0 ${stallFt * k - 1}px, #e5e7eb ${stallFt * k - 1}px ${stallFt * k}px), #3f3f46`,
+          border: `1px solid ${meta.color}`,
+        }} />
+        {fitsCar && Array.from({ length: Math.min(stalls, 6) }, (_, i) => (i % 3 === 2 ? null : (
+          <CarBox key={i} k={k} along={along === 'x' ? 'z' : 'x'} color={CAR_COLORS[i % CAR_COLORS.length]}
+            x={along === 'x' ? x + (i * stallFt + 1.5) * k : x + 1 * k}
+            z={along === 'x' ? z + 1 * k : z + (i * stallFt + 1.5) * k} />
+        )))}
+        {label}
+      </>
+    );
+  }
+
+  // Garden: lawn + a few trees on a loose grid
+  const cols = Math.max(1, Math.floor(f.w / 10)), rows = Math.max(1, Math.floor(f.d / 10));
+  const trees: [number, number][] = [];
+  for (let i = 0; i < cols && trees.length < 8; i++)
+    for (let j = 0; j < rows && trees.length < 8; j++)
+      if ((i + j) % 2 === 0) trees.push([x + ((i + 0.5) / cols) * w, z + ((j + 0.5) / rows) * d]);
+  return (
+    <>
+      <div style={{
+        ...flat(x, -0.4, z, w, d),
+        background: 'radial-gradient(circle at 30% 30%, #4d8a3a, #2f5f22)',
+        border: `1px solid ${meta.color}90`, borderRadius: '4px',
+      }} />
+      {trees.map(([tx, tz], i) => (
+        <div key={i} style={{ ...billboard(tx, -11, tz, rotX, rotY), fontSize: '22px', lineHeight: 1 }}>🌳</div>
+      ))}
+      {label}
+    </>
+  );
+}
+
+/** Deterministic pseudo-random scatter of trees outside the plot and road. */
+function scatterTrees(GW: number, GD: number, plot: Rect, roadTop: number) {
+  const spots: { x: number; y: number; r: number }[] = [];
+  let seed = 7;
+  const rnd = () => ((seed = (seed * 16807) % 2147483647) / 2147483647);
+  for (let attempts = 0; spots.length < 18 && attempts < 400; attempts++) {
+    const x = rnd() * GW, y = rnd() * GD;
+    if (x > plot.x - 8 && x < plot.x + plot.w + 8 && y > plot.z - 8 && y < plot.z + plot.d + 8) continue;
+    if (y > roadTop - 12 && y < roadTop + ROAD_H + 12) continue;
+    spots.push({ x, y, r: 8 + rnd() * 10 });
+  }
+  return spots;
 }
 
 /* ── Main component ── */
@@ -364,6 +565,13 @@ export function BuildingVisualizer() {
   const [showLabels, setShowLabels] = useState(true);
   const [exploded, setExploded] = useState(false);
   const [adding, setAdding] = useState(false);
+  const [planOpen, setPlanOpen] = useState(false);
+  // Click-to-place in 3D; the design panel on the left arms it
+  const { placing, setPlacing, focusFloor, setFocusFloor, setNotice, wallsPulse } = useDesign();
+  const [hoverFt, setHoverFt] = useState<{ x: number; z: number } | null>(null);
+  const [expanded, setExpanded] = useState(false);
+  const canvasRef = useRef<HTMLDivElement>(null);
+  const downPos = useRef({ x: 0, y: 0 });
   const [fps] = useState(144);
 
   // Full 360° rotation on both axes
@@ -374,6 +582,7 @@ export function BuildingVisualizer() {
 
   const onMouseDown = useCallback((e: React.MouseEvent) => {
     isDragging.current = true;
+    downPos.current = { x: e.clientX, y: e.clientY };
     lastPos.current = { x: e.clientX, y: e.clientY };
   }, []);
 
@@ -391,6 +600,31 @@ export function BuildingVisualizer() {
   const floors = [...state.floors].sort((a, b) => a.number - b.number);
   const totalFloors = floors.length;
   const shape = state.constraints?.shape || 'rectangle';
+  const site = state.site;
+  const unplacedCount = floors.reduce((n, f) => n + f.rooms.filter(r => r.x === null || r.z === null).length, 0);
+
+  /* ── Scale & ground layout (px; world origin = building bbox back-left corner) ── */
+  const Wft = Math.max(site.base_width_ft, 1);
+  const Dft = Math.max(site.base_depth_ft, 1);
+  const k = BASE_W / Wft;
+  const BASE_D = Dft * k;
+  const plot = { x: -site.building_x * k, z: -site.building_z * k, w: site.plot_width_ft * k, d: site.plot_depth_ft * k };
+  const margin = Math.max(plot.w, plot.d, BASE_W) * 0.45;
+  const ground = { x: plot.x - margin, z: plot.z - margin, w: plot.w + 2 * margin, d: plot.d + 2 * margin };
+  const plotLocal = { x: margin, z: margin, w: plot.w, d: plot.d };   // plot in ground-local px
+  const roadTop = margin + plot.d + 10;
+  const trees = useMemo(
+    () => scatterTrees(ground.w, ground.d, plotLocal, roadTop),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [ground.w, ground.d, plotLocal.w, plotLocal.d, roadTop],
+  );
+  const groundFloor = floors[0];
+  const doorRun = useMemo(
+    () => (groundFloor ? entrance(planWalls(groundFloor.footprint, groundFloor.rooms, Wft, Dft).ext) : null),
+    [groundFloor, Wft, Dft],
+  );
+  const door = doorRun ? { x: (doorRun.x + doorRun.len / 2) * k, z: doorRun.z * k } : { x: BASE_W / 2, z: BASE_D };
+  const coords = DISTRICT_COORDS[state.district?.id ?? ''] ?? DISTRICT_COORDS['bengaluru-urban'];
 
   const handleAddFloor = async () => {
     if (adding) return;
@@ -416,19 +650,132 @@ export function BuildingVisualizer() {
   const gap = exploded ? EXPLODE_GAP : 0;
   const floorY = (index: number) => -index * (FLOOR_H + gap);
   const buildingHeight = totalFloors * FLOOR_H + Math.max(0, totalFloors - 1) * gap + (exploded ? 0 : ROOF_H);
-  const doorX = totalFloors > 0 ? entranceX(layoutRooms(floors[0].rooms, BASE_W, BASE_D), BASE_W, BASE_D) : BASE_W / 2;
+  const extT = (state.constraints.exteriorWallIn / 12) * k;
+  const intT = (state.constraints.interiorWallIn / 12) * k;
+
+  /* ── Screen → floor plan (ft) ──
+     Un-project the cursor through the same transform chain the scene uses
+     (perspective → scale → rotateX → rotateY → world offset) and intersect
+     with the target floor's slab plane. */
+  const screenToPlan = (clientX: number, clientY: number, floorIndex: number) => {
+    const el = canvasRef.current;
+    if (!el) return null;
+    const r = el.getBoundingClientRect();
+    const sx = clientX - (r.left + r.width / 2);
+    const sy = clientY - (r.top + r.height / 2);
+    const inv = new DOMMatrix()
+      .scale(zoom, zoom, 1)
+      .rotateAxisAngle(1, 0, 0, rotX)
+      .rotateAxisAngle(0, 1, 0, rotY)
+      .translate(-BASE_W / 2, buildingHeight / 2, -BASE_D / 2)
+      .inverse();
+    const at = (Z: number) => inv.transformPoint(new DOMPoint(sx * (PERSPECTIVE - Z) / PERSPECTIVE, sy * (PERSPECTIVE - Z) / PERSPECTIVE, Z));
+    const a = at(0), b = at(200);
+    if (Math.abs(b.y - a.y) < 1e-6) return null;
+    const t = (floorY(floorIndex) - a.y) / (b.y - a.y);
+    return { x: (a.x + t * (b.x - a.x)) / k, z: (a.z + t * (b.z - a.z)) / k };
+  };
+
+  const placeFloor = placing ? floors.find(f => f.number === placing.floor) : undefined;
+  const ghost: Rect | null = placing && hoverFt ? {
+    x: Math.max(0, Math.min(Wft - placing.w, Math.round(hoverFt.x - placing.w / 2))),
+    z: Math.max(0, Math.min(Dft - placing.d, Math.round(hoverFt.z - placing.d / 2))),
+    w: placing.w, d: placing.d,
+  } : null;
+  const ignoreId = placing?.kind === 'existing' ? placing.roomId : undefined;
+  const ghostValid = !!ghost && !!placeFloor && insideUnion(ghost, placeFloor.footprint) &&
+    !placeFloor.rooms.some(o => o.id !== ignoreId && o.x !== null && o.z !== null && overlaps(ghost, o as Rect));
+
+  const onCanvasMove = (e: React.MouseEvent) => {
+    if (placing) setHoverFt(screenToPlan(e.clientX, e.clientY, placing.floor - 1));
+  };
+
+  const onCanvasClick = async (e: React.MouseEvent) => {
+    if (Math.hypot(e.clientX - downPos.current.x, e.clientY - downPos.current.y) > 5) return; // that was a rotate-drag
+    if (!placing) {
+      // Clicking the building opens the full-screen 3D view
+      if (!expanded && totalFloors > 0) setExpanded(true);
+      return;
+    }
+    if (!ghost) return;
+    if (!ghostValid) {
+      setNotice({ text: 'That spot is outside the floor or overlaps another room — move to a green spot or rotate it.', error: true });
+      return;
+    }
+    const p = placing;
+    try {
+      const next = p.kind === 'new'
+        ? await placeRoom(p.floor, p.type, ghost, p.name)
+        : await updateRoom(p.roomId, { rect: ghost });
+      dispatch({ type: 'SET_STATE', payload: next });
+      setNotice({ text: `${p.name || p.type} placed on Floor ${p.floor} (${ghost.w} × ${ghost.d} ft at ${ghost.x}, ${ghost.z}).`, error: false });
+      setPlacing(null);
+      setHoverFt(null);
+    } catch (err) {
+      setNotice({ text: err instanceof Error ? err.message : String(err), error: true });
+    }
+  };
+
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if ((e.target as HTMLElement).tagName === 'INPUT') return;
+      if (e.key === 'Escape') {
+        if (placing) { setPlacing(null); setHoverFt(null); } else setExpanded(false);
+      }
+      if (placing && (e.key === 'r' || e.key === 'R')) setPlacing(p => p && { ...p, w: p.d, d: p.w });
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [placing, setPlacing]);
+
+  // Mouse wheel / trackpad pinch zooms the 3D only, never the page
+  useEffect(() => {
+    const el = canvasRef.current;
+    if (!el) return;
+    const onWheel = (e: WheelEvent) => {
+      e.preventDefault();
+      const factor = Math.exp(-e.deltaY * (e.ctrlKey ? 0.01 : 0.0015));
+      setZoom(z => Math.min(3, Math.max(0.3, z * factor)));
+    };
+    el.addEventListener('wheel', onWheel, { passive: false });
+    return () => el.removeEventListener('wheel', onWheel);
+  }, []);
+
+  // Floors above the one being worked on are cut away so its rooms are visible
+  const cutAt = placing ? placing.floor : focusFloor;
+  const visibleFloors = cutAt ? floors.filter(f => f.number <= cutAt) : floors;
+  const topVisible = visibleFloors.length ? visibleFloors[visibleFloors.length - 1].number : 0;
+  const isTopView = rotX <= -85;
+  // Plan drawing (low walls, gridded slab) while placing or looking straight down
+  const planMode = !!placing || isTopView;
+
+  /** Look straight down at the plan (front/road side at the bottom) and fit it to the screen. */
+  const goTopView = useCallback(() => {
+    setRotX(-90);
+    setRotY(0);
+    const r = canvasRef.current?.getBoundingClientRect();
+    if (r) setZoom(Math.min(3, Math.max(0.5, Math.min(r.width / (BASE_W * 1.2), r.height / (BASE_D * 1.2)))));
+  }, [BASE_D]);
+  const go3DView = () => { setRotX(-22); setRotY(-35); setZoom(0.9); };
+
+  // Starting a placement switches to the top view, where spots are easiest to judge
+  const placingActive = !!placing;
+  useEffect(() => { if (placingActive) goTopView(); }, [placingActive, goTopView]);
+  const floorShapes = [...new Set(floors.map(f => f.shape))];
 
   return (
     <div
-      style={{ flex: 1, display: 'flex', flexDirection: 'column', position: 'relative', overflow: 'hidden' }}
+      style={expanded
+        ? { position: 'fixed', inset: 0, zIndex: 800, display: 'flex', flexDirection: 'column', overflow: 'hidden', background: '#07070c' }
+        : { flex: 1, display: 'flex', flexDirection: 'column', position: 'relative', overflow: 'hidden', minWidth: 0 }}
       onMouseMove={onMouseMove}
       onMouseUp={stopDrag}
       onMouseLeave={stopDrag}
     >
       {/* ── Metadata bar ── */}
       <div style={{
-        display: 'flex', alignItems: 'center', gap: '1.5rem',
-        padding: '0.5rem 1.25rem',
+        display: 'flex', alignItems: 'center', gap: '1.1rem',
+        padding: '0.5rem 1.25rem', whiteSpace: 'nowrap', overflow: 'hidden',
         background: 'rgba(0,0,0,0.4)',
         borderBottom: '1px solid var(--border-subtle)',
         fontSize: '0.65rem', fontWeight: 600, letterSpacing: '0.07em',
@@ -438,12 +785,13 @@ export function BuildingVisualizer() {
           <span style={{ width: '7px', height: '7px', borderRadius: '50%', background: '#10b981', display: 'inline-block' }} />
           RENDER: VULKAN 3D
         </span>
-        <span>COORDS: 40.7128° N, 74.0060° W</span>
+        <span>COORDS: {coords[0].toFixed(4)}° N, {coords[1].toFixed(4)}° E</span>
         <span style={{ color: '#06b6d4' }}>ZOOM: {zoom.toFixed(1)}X</span>
         <span style={{ color: '#f59e0b' }}>ROT Y: {displayRotY}°</span>
         <span style={{ color: '#f59e0b' }}>ROT X: {displayRotX}°</span>
-        <span style={{ color: '#a78bfa' }}>SHAPE: {shape.toUpperCase()}</span>
+        <span style={{ color: '#a78bfa' }}>SHAPE: {(floorShapes.length ? floorShapes : [shape]).join(' + ').toUpperCase()}</span>
         <span style={{ color: '#a3e635' }}>VIEW: {exploded ? 'EXPLODED' : 'STACKED'}</span>
+        <span style={{ color: '#d6d3d1' }}>WALLS: {state.constraints.exteriorWallIn}″ / {state.constraints.interiorWallIn}″</span>
         <span style={{ marginLeft: 'auto' }}>FPS: {fps}</span>
       </div>
 
@@ -452,11 +800,14 @@ export function BuildingVisualizer() {
         style={{
           flex: 1, position: 'relative', overflow: 'hidden',
           display: 'flex', alignItems: 'center', justifyContent: 'center',
-          cursor: isDragging.current ? 'grabbing' : 'grab',
+          cursor: placing ? (ghostValid ? 'copy' : 'crosshair') : isDragging.current ? 'grabbing' : expanded ? 'grab' : 'zoom-in',
           userSelect: 'none',
-          perspective: '1400px',
+          perspective: `${PERSPECTIVE}px`,
         }}
+        ref={canvasRef}
         onMouseDown={onMouseDown}
+        onMouseMove={onCanvasMove}
+        onClick={onCanvasClick}
       >
         {/* Grid bg */}
         <div style={{
@@ -472,8 +823,6 @@ export function BuildingVisualizer() {
           pointerEvents: 'none',
         }} />
 
-        {/* ML structural-risk badge — top-right open area */}
-        <RiskToast />
 
         {/* Drag hint */}
         {totalFloors > 0 && (
@@ -482,19 +831,63 @@ export function BuildingVisualizer() {
             fontSize: '0.6rem', letterSpacing: '0.1em', color: 'var(--text-tertiary)',
             fontWeight: 600, pointerEvents: 'none',
           }}>
-            DRAG TO ROTATE • 360°
+            DRAG TO ROTATE • SCROLL TO ZOOM
           </div>
         )}
 
+        {/* Which floor is shown, and a way back to the whole building */}
+        {cutAt && cutAt < totalFloors && (
+          <div onMouseDown={e => e.stopPropagation()} onClick={e => e.stopPropagation()} style={{
+            position: 'absolute', top: unplacedCount > 0 ? '3rem' : '0.75rem', left: '50%', transform: 'translateX(-50%)', zIndex: 5,
+            display: 'flex', alignItems: 'center', gap: '0.6rem', padding: '0.35rem 0.5rem 0.35rem 0.85rem',
+            background: 'rgba(124,58,237,0.15)', border: '1px solid rgba(124,58,237,0.5)', borderRadius: '20px',
+            color: '#e9d5ff', fontSize: '0.7rem', fontWeight: 700,
+          }}>
+            Showing Floor {cutAt} — floors above hidden
+            {!placing && (
+              <button onClick={() => setFocusFloor(null)} style={{ background: 'rgba(255,255,255,0.1)', border: 'none', borderRadius: '12px', padding: '0.2rem 0.6rem', color: '#fff', fontSize: '0.66rem', fontWeight: 700, cursor: 'pointer' }}>
+                Show whole building
+              </button>
+            )}
+          </div>
+        )}
+
+        {/* Full-screen 3D: hint to open, button to close */}
+        {totalFloors > 0 && !placing && (
+          <button
+            onMouseDown={e => e.stopPropagation()}
+            onClick={e => { e.stopPropagation(); setExpanded(v => !v); }}
+            style={{
+              position: 'absolute', top: '0.75rem', left: '0.75rem', zIndex: 5,
+              display: 'flex', alignItems: 'center', gap: '0.4rem', padding: '0.4rem 0.75rem',
+              background: 'rgba(13,13,20,0.85)', border: '1px solid var(--border-subtle)', borderRadius: '8px',
+              color: 'var(--text-secondary)', fontSize: '0.68rem', fontWeight: 700, cursor: 'pointer',
+            }}>
+            {expanded ? <><Minimize2 size={13} /> Exit full view (Esc)</> : <><Maximize2 size={13} /> Full 3D view · or click the building</>}
+          </button>
+        )}
+
+        {/* Rooms added via chat still need the user to pick a spot */}
+        {unplacedCount > 0 && (
+          <button onMouseDown={e => e.stopPropagation()} onClick={e => { e.stopPropagation(); setPlanOpen(true); }} style={{
+            position: 'absolute', top: '0.75rem', left: '50%', transform: 'translateX(-50%)', zIndex: 5,
+            display: 'flex', alignItems: 'center', gap: '0.45rem',
+            background: 'rgba(251,191,36,0.12)', border: '1px solid rgba(251,191,36,0.45)', borderRadius: '20px',
+            padding: '0.35rem 0.85rem', color: '#fbbf24', fontSize: '0.7rem', fontWeight: 700, cursor: 'pointer',
+          }}>
+            <LayoutGrid size={13} /> {unplacedCount} room{unplacedCount === 1 ? '' : 's'} waiting for you to pick a spot — open Floor Plan
+          </button>
+        )}
+
         {/* Room legend */}
-        {totalFloors > 0 && showLabels && (
+        {totalFloors > 0 && showLabels && !placing && (
           <div style={{
-            position: 'absolute', top: '0.75rem', left: '1rem',
-            display: 'flex', flexDirection: 'column', gap: '0.3rem',
+            position: 'absolute', bottom: '1.5rem', left: '1rem', zIndex: 4,
+            display: 'grid', gridTemplateColumns: 'repeat(2, auto)', gap: '0.25rem 0.75rem',
             background: 'rgba(13,13,20,0.75)', border: '1px solid var(--border-subtle)',
             borderRadius: '10px', padding: '0.5rem 0.65rem', pointerEvents: 'none',
           }}>
-            {Object.entries(ROOM_META).map(([type, meta]) => (
+            {[...Object.entries(ROOM_META), ...Object.entries(SITE_META)].map(([type, meta]) => (
               <span key={type} style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.58rem', fontWeight: 600, letterSpacing: '0.06em', color: 'var(--text-secondary)' }}>
                 <span style={{ width: '9px', height: '9px', borderRadius: '2px', background: `${meta.color}55`, border: `1px solid ${meta.color}` }} />
                 {type.toUpperCase()}
@@ -521,7 +914,7 @@ export function BuildingVisualizer() {
             }}>
               {/* Satellite-style ground */}
               <div style={{
-                ...flat((BASE_W - GROUND_W) / 2, 1, (BASE_D - GROUND_D) / 2, GROUND_W, GROUND_D),
+                ...flat(ground.x, 1, ground.z, ground.w, ground.d),
                 background: `
                   radial-gradient(circle at 28% 36%, rgba(94,122,66,0.55) 0%, transparent 32%),
                   radial-gradient(circle at 72% 62%, rgba(74,100,56,0.5) 0%, transparent 28%),
@@ -540,7 +933,7 @@ export function BuildingVisualizer() {
                 }} />
                 {/* Highlight glow — spotlights the house against the terrain */}
                 <div style={{
-                  position: 'absolute', left: '50%', top: '50%',
+                  position: 'absolute', left: `${BASE_W / 2 - ground.x}px`, top: `${BASE_D / 2 - ground.z}px`,
                   width: `${BASE_W + 200}px`, height: `${BASE_D + 160}px`,
                   transform: 'translate(-50%,-50%)', borderRadius: '50%',
                   background: 'radial-gradient(ellipse, rgba(6,182,212,0.35) 0%, rgba(124,58,237,0.16) 42%, transparent 72%)',
@@ -548,14 +941,14 @@ export function BuildingVisualizer() {
                 }} />
                 {/* Contact shadow directly under the house */}
                 <div style={{
-                  position: 'absolute', left: '50%', top: '50%',
+                  position: 'absolute', left: `${BASE_W / 2 - ground.x}px`, top: `${BASE_D / 2 - ground.z}px`,
                   width: `${BASE_W + 50}px`, height: `${BASE_D + 40}px`,
                   transform: 'translate(-50%,-50%)', borderRadius: '12%',
                   background: 'radial-gradient(ellipse, rgba(0,0,0,0.7) 0%, transparent 72%)',
                 }} />
                 {/* Road running past the front of the plot */}
                 <div style={{
-                  position: 'absolute', left: 0, top: `${ROAD_TOP}px`, width: '100%', height: `${ROAD_H}px`,
+                  position: 'absolute', left: 0, top: `${roadTop}px`, width: '100%', height: `${ROAD_H}px`,
                   background: 'linear-gradient(90deg, rgba(55,55,55,0.85), rgba(88,88,88,0.92), rgba(55,55,55,0.85))',
                   boxShadow: '0 0 8px rgba(0,0,0,0.5)',
                 }}>
@@ -567,13 +960,13 @@ export function BuildingVisualizer() {
                 {/* Footpath from the entrance to the road */}
                 <div style={{
                   position: 'absolute',
-                  left: `${(GROUND_W - BASE_W) / 2 + doorX - 8}px`, width: '16px',
-                  top: `${(GROUND_D + BASE_D) / 2}px`, height: `${ROAD_TOP - (GROUND_D + BASE_D) / 2}px`,
+                  left: `${door.x - ground.x - 8}px`, width: '16px',
+                  top: `${door.z - ground.z}px`, height: `${Math.max(0, roadTop - (door.z - ground.z))}px`,
                   background: 'repeating-linear-gradient(180deg, #a8a29e 0 6px, #8a8480 6px 7px)',
                   opacity: 0.85,
                 }} />
                 {/* Scattered vegetation */}
-                {TREE_SPOTS.map((t, i) => (
+                {trees.map((t, i) => (
                   <div key={i} style={{
                     position: 'absolute', left: `${t.x}px`, top: `${t.y}px`,
                     width: `${t.r}px`, height: `${t.r}px`, borderRadius: '50%',
@@ -582,34 +975,82 @@ export function BuildingVisualizer() {
                     transform: 'translate(-50%,-50%)',
                   }} />
                 ))}
-                {/* Plot boundary around the house */}
+                {/* Plot boundary — the land the user configured */}
                 <div style={{
                   position: 'absolute',
-                  left: `${(GROUND_W - PLOT_W) / 2}px`, top: `${(GROUND_D - PLOT_D) / 2}px`,
-                  width: `${PLOT_W}px`, height: `${PLOT_D}px`,
-                  border: '1px dashed rgba(255,255,255,0.3)',
-                }} />
+                  left: `${plotLocal.x}px`, top: `${plotLocal.z}px`,
+                  width: `${plotLocal.w}px`, height: `${plotLocal.d}px`,
+                  border: '1px dashed rgba(255,255,255,0.45)',
+                  background: 'rgba(120,140,90,0.12)',
+                }}>
+                  <span style={{ position: 'absolute', right: '4px', bottom: '2px', fontSize: '7px', fontWeight: 700, color: 'rgba(255,255,255,0.55)', letterSpacing: '0.08em' }}>
+                    PLOT {site.plot_width_ft}×{site.plot_depth_ft} FT
+                  </span>
+                </div>
               </div>
 
+              {/* Parking & gardens */}
+              {site.features.map(f => (
+                <SiteFeatureView key={f.id} f={f} k={k} ox={site.building_x} oz={site.building_z}
+                  rotX={rotX} rotY={rotY} showLabels={showLabels} />
+              ))}
+
               {/* Building floors */}
-              {floors.map(floor => (
+              {visibleFloors.map(floor => (
                 <FloorBlock
+                  isTop={exploded || floor.number === topVisible}
+                  plan={planMode && floor.number === topVisible}
+                  pointedRoof={!exploded && !planMode && !cutAt && floor.number === totalFloors}
+                  wallsPulse={wallsPulse}
+                  wallLabel={`${state.constraints.exteriorWallIn}″`}
+                  extT={extT}
+                  intT={intT}
                   key={floor.id}
                   floor={floor}
                   index={floor.number - 1}
-                  shape={shape}
+                  k={k}
+                  W={Wft}
+                  D={Dft}
                   showLabels={showLabels}
                   y={floorY(floor.number - 1)}
                   rotX={rotX}
                   rotY={rotY}
                 />
               ))}
-              {!exploded && <RoofCap totalFloors={totalFloors} shape={shape} y={floorY(totalFloors)} />}
+              {!exploded && !planMode && !cutAt && floors[totalFloors - 1]?.shape !== 'pyramid' && <RoofCap floor={floors[totalFloors - 1]} k={k} W={Wft} D={Dft} y={floorY(totalFloors)} />}
+
+              {/* Where the room will go — follows the cursor on the target floor */}
+              {ghost && placing && (
+                <div style={{ position: 'absolute', left: 0, top: 0, transformStyle: 'preserve-3d', transformOrigin: '0 0', transform: `translate3d(0px,${floorY(placing.floor - 1)}px,0px)`, pointerEvents: 'none' }}>
+                  {(() => {
+                    const c = ghostValid ? '16,185,129' : '239,68,68';
+                    const gx = ghost.x * k, gz = ghost.z * k, gw = ghost.w * k, gd = ghost.d * k, gh = PLAN_WALL_H + 6;
+                    const side: React.CSSProperties = { background: `rgba(${c},0.22)`, border: `1px solid rgba(${c},0.9)` };
+                    return (
+                      <>
+                        <div style={{ ...flat(gx, -1.5, gz, gw, gd), background: `rgba(${c},0.45)`, border: `2px dashed rgb(${c})`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                          <span style={{ fontSize: `${Math.max(5, Math.min(8, gw * 0.12))}px`, fontWeight: 800, color: '#0f172a', textAlign: 'center' }}>
+                            {ghost.w}×{ghost.d} ft
+                          </span>
+                        </div>
+                        <div style={{ ...wallX(gx, -gh, gz + gd, gw, gh), ...side }} />
+                        <div style={{ ...wallX(gx, -gh, gz, gw, gh), ...side }} />
+                        <div style={{ ...wallZ(gx, -gh, gz, gd, gh), ...side }} />
+                        <div style={{ ...wallZ(gx + gw, -gh, gz, gd, gh), ...side }} />
+                        <div style={{ ...billboard(gx + gw / 2, -gh - 4, gz - 6, rotX, rotY), background: 'rgba(10,14,22,0.88)', border: `1px solid rgb(${c})`, borderRadius: '3px', padding: '1px 4px', fontSize: '5px', fontWeight: 700, color: '#e2e8f0', whiteSpace: 'nowrap' }}>
+                          {roomMeta(placing.type).symbol} {ghost.w}×{ghost.d} FT · {ghostValid ? 'CLICK TO PLACE' : 'BLOCKED'}
+                        </div>
+                      </>
+                    );
+                  })()}
+                </div>
+              )}
             </div>
           </div>
         )}
 
-        <style>{`@keyframes houseGlowPulse { 0%, 100% { opacity: 0.75; } 50% { opacity: 1; } }`}</style>
+        <style>{`@keyframes houseGlowPulse { 0%, 100% { opacity: 0.75; } 50% { opacity: 1; } }
+          @keyframes wallPulse { 0%, 100% { filter: none; } 50% { filter: drop-shadow(0 0 6px #f59e0b) brightness(1.4) sepia(1) saturate(4) hue-rotate(-15deg); } }`}</style>
       </div>
 
       {/* ── Labelled toolbar ── */}
@@ -621,15 +1062,20 @@ export function BuildingVisualizer() {
         alignItems: 'flex-end',
       }}>
         <ToolBtn icon={<RotateCcw size={15} />} label="Reset" onClick={handleReset} />
-        <ToolBtn icon={<ZoomIn size={15} />} label="Zoom In" onClick={() => setZoom(z => Math.min(z + 0.15, 2.5))} />
+        <ToolBtn icon={<ZoomIn size={15} />} label="Zoom In" onClick={() => setZoom(z => Math.min(z + 0.15, 3))} />
         <ToolBtn icon={<Plus size={18} />} label="Add Floor" accent loading={adding} onClick={handleAddFloor} />
+        <ToolBtn icon={<LayoutGrid size={15} />} label="Floor Plan" onClick={() => setPlanOpen(true)} active={planOpen} />
         <ToolBtn icon={<ZoomOut size={15} />} label="Zoom Out" onClick={() => setZoom(z => Math.max(z - 0.15, 0.3))} />
         <ToolBtn
           icon={showLabels ? <Eye size={15} /> : <EyeOff size={15} />}
           label="Labels" onClick={() => setShowLabels(v => !v)} active={showLabels}
         />
         <ToolBtn icon={<Layers size={15} />} label="Explode" onClick={() => setExploded(v => !v)} active={exploded} />
+        <ToolBtn icon={isTopView ? <Box size={15} /> : <Square size={15} />} label={isTopView ? '3D View' : 'Top View'}
+          onClick={() => (isTopView ? go3DView() : goTopView())} active={isTopView} />
       </div>
+
+      {planOpen && <FloorPlanEditor onClose={() => setPlanOpen(false)} />}
     </div>
   );
 }

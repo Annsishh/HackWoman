@@ -8,7 +8,7 @@ export const BUDGET = {
 
 export const CONSTRAINTS = {
   MAX_FLOORS: 10,
-  MAX_ROOMS_PER_FLOOR: 6,
+  MAX_ROOMS_PER_FLOOR: 12,
   MIN_ROOMS_PER_FLOOR: 1,
 } as const;
 
@@ -29,13 +29,14 @@ export const WELCOME_MESSAGE =
   "Welcome! I'm your AI Architect Assistant. You have a ₹50L budget to build with.\n\n" +
   "Try commands like:\n" +
   "• \"Add a floor\"\n" +
-  "• \"Add 3 rooms on floor 1\"\n" +
+  "• \"Add a 160 sqft bedroom to floor 1\"\n" +
+  "• Open **Floor Plan** to size each room and click exactly where it goes\n" +
   "• \"Suggest improvements\"\n" +
   "• \"Show status\"";
 
 export const QUICK_ACTIONS = [
   'Add a floor',
-  'Add 2 rooms on floor 1',
+  'Add a 160 sqft bedroom to floor 1',
   'Suggest improvements',
   'Show status',
   'Reset building',

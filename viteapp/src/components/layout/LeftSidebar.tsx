@@ -2,10 +2,12 @@ import { useState } from 'react';
 import {
   LayoutGrid, Zap, Circle, Layers, History,
   HelpCircle, Image, X, Building2, DollarSign,
-  Maximize2, Keyboard, Download, ChevronRight, Loader2,
+  Maximize2, Keyboard, Download, ChevronRight,
 } from 'lucide-react';
 import { useBuilding } from '../../context/BuildingContext';
-import { sendMessage } from '../../services/api';
+import { useDesign } from '../../context/DesignContext';
+import { PRESETS } from '../../utils/presets';
+import { roomMeta } from '../../utils/rooms';
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 const fmt = (n: number) =>
@@ -86,166 +88,60 @@ function OverviewPanel() {
 }
 
 // ── Panel: Quick Commands ─────────────────────────────────────────────────────
+// Presets and single rooms open the "which floor / what size" dialog; nothing
+// is built (and no floor is added) until the user confirms there.
 
-type RoomSpec = { type: string; count: number };
-type Preset   = { label: string; emoji: string; color: string; desc: string; rooms: RoomSpec[] };
-
-const PRESETS: Preset[] = [
-  { label: '1BHK',       emoji: '🏠', color: '#8b5cf6', desc: '1 bed · 1 kitchen · 1 bath',
-    rooms: [{ type: 'bedroom', count: 1 }, { type: 'kitchen', count: 1 }, { type: 'washroom', count: 1 }] },
-  { label: '2BHK',       emoji: '🏡', color: '#06b6d4', desc: '2 bed · 1 kitchen · 1 bath',
-    rooms: [{ type: 'bedroom', count: 2 }, { type: 'kitchen', count: 1 }, { type: 'washroom', count: 1 }] },
-  { label: '3BHK',       emoji: '🏗', color: '#10b981', desc: '3 bed · 1 kitchen · 2 baths',
-    rooms: [{ type: 'bedroom', count: 3 }, { type: 'kitchen', count: 1 }, { type: 'washroom', count: 2 }] },
-  { label: '4BHK',       emoji: '🏢', color: '#a855f7', desc: '4 bed · 2 kitchen · 2 baths',
-    rooms: [{ type: 'bedroom', count: 4 }, { type: 'kitchen', count: 2 }, { type: 'washroom', count: 2 }] },
-  { label: 'Studio',     emoji: '🛖', color: '#ec4899', desc: '1 bed · 1 kitchen · 1 bath',
-    rooms: [{ type: 'bedroom', count: 1 }, { type: 'kitchen', count: 1 }, { type: 'washroom', count: 1 }] },
-  { label: 'Office Flr', emoji: '💼', color: '#f97316', desc: '4 offices · 1 bath',
-    rooms: [{ type: 'office', count: 4 }, { type: 'washroom', count: 1 }] },
-  { label: 'Penthouse',  emoji: '✨', color: '#f59e0b', desc: '3 bed · 2 kitchen · 3 baths · living · dining',
-    rooms: [{ type: 'bedroom', count: 3 }, { type: 'kitchen', count: 2 }, { type: 'washroom', count: 3 }, { type: 'living', count: 1 }, { type: 'dining', count: 1 }] },
-  { label: 'Commercial', emoji: '🏬', color: '#64748b', desc: '6 offices · 2 baths',
-    rooms: [{ type: 'office', count: 6 }, { type: 'washroom', count: 2 }] },
-];
-
-type RoomAdd = { label: string; emoji: string; color: string; type: string; count: number };
-const ROOM_ADDS: RoomAdd[] = [
-  { label: 'Bedroom',     emoji: '🛏', color: '#8b5cf6', type: 'bedroom',  count: 1 },
-  { label: '2 Bedrooms',  emoji: '🛏', color: '#8b5cf6', type: 'bedroom',  count: 2 },
-  { label: 'Kitchen',     emoji: '🍳', color: '#f59e0b', type: 'kitchen',  count: 1 },
-  { label: 'Washroom',    emoji: '🚿', color: '#06b6d4', type: 'washroom', count: 1 },
-  { label: '2 Washrooms', emoji: '🚿', color: '#06b6d4', type: 'washroom', count: 2 },
-  { label: 'Office',      emoji: '💼', color: '#f97316', type: 'office',   count: 1 },
-  { label: '2 Offices',   emoji: '💼', color: '#f97316', type: 'office',   count: 2 },
-  { label: 'Living Room', emoji: '🛋', color: '#ec4899', type: 'living',   count: 1 },
-  { label: 'Dining Room', emoji: '🍽', color: '#a855f7', type: 'dining',   count: 1 },
-  { label: 'Playroom',    emoji: '🎮', color: '#10b981', type: 'playroom', count: 1 },
+const ROOM_ADDS: { label: string; type: string }[] = [
+  { label: 'Bedroom', type: 'bedroom' },
+  { label: 'Kitchen', type: 'kitchen' },
+  { label: 'Bathroom', type: 'bathroom' },
+  { label: 'Living / Hall', type: 'living' },
+  { label: 'Dining', type: 'dining' },
+  { label: 'Office', type: 'office' },
+  { label: 'Store', type: 'store' },
 ];
 
 function QuickCommandsPanel() {
-  const { state, dispatch } = useBuilding();
-  const [loading, setLoading] = useState<string | null>(null);
-  const [feedback, setFeedback] = useState<{ msg: string; ok: boolean } | null>(null);
+  const { focusFloor, openPreset } = useDesign();
 
-  const lastFloor = state.floors.length > 0
-    ? state.floors[state.floors.length - 1].number
-    : null;
-
-  const call = async (msg: string) => {
-    const res = await sendMessage(msg);
-    if (res.updatedState) dispatch({ type: 'SET_STATE', payload: res.updatedState });
-    if (res.structuralRisk !== undefined) dispatch({ type: 'SET_RISK', payload: res.structuralRisk });
-    return res;
-  };
-
-  const showFeedback = (msg: string, ok: boolean) => {
-    setFeedback({ msg, ok });
-    setTimeout(() => setFeedback(null), 4000);
-  };
-
-  // Preset: 1) add floor, 2) chain room additions sequentially
-  const firePreset = async (preset: Preset) => {
-    if (loading) return;
-    setLoading(preset.label);
-    setFeedback(null);
-    try {
-      const flRes = await call('add a floor');
-      if (flRes.message_type === 'error' || flRes.message_type === 'warning') {
-        showFeedback(flRes.message?.split('.')[0] ?? 'Failed to add floor', false);
-        return;
-      }
-      const newFloor = flRes.updatedState?.floors?.length ?? (state.floors.length + 1);
-      for (const room of preset.rooms) {
-        const suffix = room.count > 1 ? 's' : '';
-        await call(`add ${room.count} ${room.type}${suffix} to floor ${newFloor}`);
-      }
-      showFeedback(`${preset.label} built on floor ${newFloor}!`, true);
-    } catch (e) {
-      showFeedback((e as Error).message || 'Request failed', false);
-    } finally {
-      setLoading(null);
-    }
-  };
-
-  // Single room: target last floor or create one first
-  const fireRoom = async (r: RoomAdd) => {
-    if (loading) return;
-    setLoading(r.label);
-    setFeedback(null);
-    try {
-      let target = lastFloor;
-      if (target === null) {
-        const flRes = await call('add a floor');
-        if (flRes.message_type === 'error') { showFeedback('Could not add floor', false); return; }
-        target = flRes.updatedState?.floors?.length ?? 1;
-      }
-      const suffix = r.count > 1 ? 's' : '';
-      const res = await call(`add ${r.count} ${r.type}${suffix} to floor ${target}`);
-      const ok = res.message_type !== 'error' && res.message_type !== 'warning';
-      showFeedback(res.message?.split('.')[0] ?? 'Done!', ok);
-    } catch (e) {
-      showFeedback((e as Error).message || 'Request failed', false);
-    } finally {
-      setLoading(null);
-    }
-  };
-
-  const Btn = ({ label, emoji, color, btnKey, sub, onClick }:
-    { label: string; emoji: string; color: string; btnKey: string; sub?: string; onClick: () => void }) => (
-    <button onClick={onClick} disabled={!!loading} style={{
-      display: 'flex', alignItems: 'center', gap: '0.5rem',
-      background: loading === btnKey ? `${color}18` : 'rgba(255,255,255,0.03)',
-      border: `1px solid ${loading === btnKey ? color + '55' : 'rgba(255,255,255,0.06)'}`,
-      borderRadius: '7px', padding: '0.45rem 0.65rem',
-      cursor: loading ? 'wait' : 'pointer',
-      color: loading === btnKey ? color : 'var(--text-secondary)',
-      width: '100%', fontSize: '0.72rem', fontWeight: 500,
-      transition: 'all 0.15s', textAlign: 'left',
-      opacity: loading && loading !== btnKey ? 0.45 : 1,
+  const Btn = ({ label, emoji, color, sub, onClick }: { label: string; emoji: string; color: string; sub?: string; onClick: () => void }) => (
+    <button onClick={onClick} style={{
+      display: 'flex', alignItems: 'center', gap: '0.5rem', background: 'rgba(255,255,255,0.03)',
+      border: '1px solid rgba(255,255,255,0.06)', borderRadius: '7px', padding: '0.45rem 0.65rem',
+      cursor: 'pointer', color: 'var(--text-secondary)', width: '100%', fontSize: '0.72rem', fontWeight: 500, textAlign: 'left',
     }}
-      onMouseEnter={e => { if (!loading) { const b = e.currentTarget as HTMLButtonElement; b.style.borderColor = color + '50'; b.style.color = color; }}}
-      onMouseLeave={e => { if (loading !== btnKey) { const b = e.currentTarget as HTMLButtonElement; b.style.borderColor = 'rgba(255,255,255,0.06)'; b.style.color = 'var(--text-secondary)'; }}}
+      onMouseEnter={e => { e.currentTarget.style.borderColor = color + '50'; e.currentTarget.style.color = color; }}
+      onMouseLeave={e => { e.currentTarget.style.borderColor = 'rgba(255,255,255,0.06)'; e.currentTarget.style.color = 'var(--text-secondary)'; }}
     >
       <span style={{ fontSize: '0.85rem', flexShrink: 0 }}>{emoji}</span>
       <div style={{ flex: 1, minWidth: 0 }}>
         <div>{label}</div>
         {sub && <div style={{ fontSize: '0.58rem', color: 'var(--text-tertiary)', marginTop: '1px' }}>{sub}</div>}
       </div>
-      {loading === btnKey
-        ? <Loader2 size={11} style={{ color, animation: 'spin 1s linear infinite', flexShrink: 0 }} />
-        : <span style={{ fontSize: '0.6rem', color, opacity: 0.55, flexShrink: 0 }}>↵</span>}
+      <span style={{ fontSize: '0.6rem', color, opacity: 0.55, flexShrink: 0 }}>›</span>
     </button>
   );
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-      <div style={{ fontSize: '0.62rem', color: 'var(--text-tertiary)', background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.06)', borderRadius: '6px', padding: '0.4rem 0.6rem', display: 'flex', justifyContent: 'space-between' }}>
-        <span>Room target:</span>
-        <span style={{ color: lastFloor !== null ? '#06b6d4' : '#f59e0b', fontWeight: 700 }}>
-          {lastFloor !== null ? `Floor ${lastFloor}` : 'New floor (auto)'}
-        </span>
+      <div style={{ fontSize: '0.62rem', color: 'var(--text-tertiary)', background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.06)', borderRadius: '6px', padding: '0.4rem 0.6rem', lineHeight: 1.5 }}>
+        You'll choose the floor{focusFloor ? ` (current: Floor ${focusFloor})` : ''} and room sizes before anything is added.
       </div>
-      {feedback && (
-        <div style={{ padding: '0.45rem 0.65rem', borderRadius: '7px', fontSize: '0.68rem', lineHeight: 1.4, background: feedback.ok ? 'rgba(16,185,129,0.1)' : 'rgba(239,68,68,0.1)', border: `1px solid ${feedback.ok ? 'rgba(16,185,129,0.3)' : 'rgba(239,68,68,0.3)'}`, color: feedback.ok ? '#6ee7b7' : '#f87171' }}>
-          {feedback.ok ? '✓' : '✗'} {feedback.msg}
-        </div>
-      )}
       <div>
-        <div style={{ fontSize: '0.6rem', fontWeight: 700, letterSpacing: '0.08em', color: '#a855f7', textTransform: 'uppercase', marginBottom: '0.4rem' }}>✨ New Floor Preset</div>
+        <div style={{ fontSize: '0.6rem', fontWeight: 700, letterSpacing: '0.08em', color: '#a855f7', textTransform: 'uppercase', marginBottom: '0.4rem' }}>✨ Home presets</div>
         <div style={{ display: 'flex', flexDirection: 'column', gap: '0.28rem' }}>
-          {PRESETS.map(p => <Btn key={p.label} btnKey={p.label} label={p.label} emoji={p.emoji} color={p.color} sub={p.desc} onClick={() => firePreset(p)} />)}
+          {PRESETS.map(p => <Btn key={p.id} label={p.label} emoji={p.emoji} color={p.color} sub={p.desc} onClick={() => openPreset(p)} />)}
         </div>
       </div>
       <div>
-        <div style={{ fontSize: '0.6rem', fontWeight: 700, letterSpacing: '0.08em', color: '#06b6d4', textTransform: 'uppercase', marginBottom: '0.4rem' }}>
-          ＋ Room → {lastFloor !== null ? `Floor ${lastFloor}` : 'New Floor'}
-        </div>
+        <div style={{ fontSize: '0.6rem', fontWeight: 700, letterSpacing: '0.08em', color: '#06b6d4', textTransform: 'uppercase', marginBottom: '0.4rem' }}>＋ Single room</div>
         <div style={{ display: 'flex', flexDirection: 'column', gap: '0.28rem' }}>
-          {ROOM_ADDS.map(r => <Btn key={r.label} btnKey={r.label} label={r.label} emoji={r.emoji} color={r.color} onClick={() => fireRoom(r)} />)}
+          {ROOM_ADDS.map(r => (
+            <Btn key={r.type} label={r.label} emoji={roomMeta(r.type).symbol} color={roomMeta(r.type).color}
+              onClick={() => openPreset({ id: `single-${r.type}`, label: r.label, emoji: roomMeta(r.type).symbol, color: roomMeta(r.type).color, desc: 'Single room', rooms: [{ type: r.type, name: r.type === 'living' ? 'Hall' : undefined }] })} />
+          ))}
         </div>
       </div>
-      <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
     </div>
   );
 }

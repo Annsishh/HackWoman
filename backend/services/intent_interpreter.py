@@ -18,15 +18,15 @@ logger = logging.getLogger(__name__)
 GEMINI_SYSTEM_PROMPT = """You are a command interpreter for an AI Architect building planner app.
 Parse the user's natural language command into a structured JSON action.
 
-Supported room types: bedroom, bathroom, kitchen, hallway, office, store, general
+Supported room types: bedroom, bathroom, kitchen, living, dining, hallway, office, store, general
 
 Available actions:
-- "add_floor"           — params: {}
+- "add_floor"           — params: {} or {"shape": "rectangle"|"square"|"pyramid"|"l-shape"|"u-shape"|"t-shape"|"courtyard"}
 - "add_floors"          — params: {"count": int}
 - "remove_floor"        — params: {"floor_number": int}
-- "add_rooms"           — params: {"floor_number": int, "count": int}
+- "add_rooms"           — params: {"floor_number": int, "count": int, "area_sqft": int}
 - "remove_rooms"        — params: {"floor_number": int, "count": int}
-- "add_typed_room"      — params: {"floor_number": int, "room_type": str, "count": int}
+- "add_typed_room"      — params: {"floor_number": int, "room_type": str, "count": int, "area_sqft": int}
 - "remove_typed_rooms"  — params: {"floor_number": int, "room_type": str, "count": int}
 - "get_suggestions"     — params: {}
 - "show_status"         — params: {}
@@ -37,11 +37,15 @@ Available actions:
 
 Rules:
 - If the user says "add a floor" or "add another floor", use "add_floor".
+- If they name a shape ("add a pyramid floor", "add an L-shaped floor"), include it as params.shape.
 - If the user says "add 3 floors", use "add_floors" with count 3.
 - If the user says "add 2 rooms on floor 1", use "add_rooms" with floor_number=1, count=2.
 - If the user mentions a specific room type like "add a bathroom to floor 2" or "add kitchen on floor 1",
   use "add_typed_room" with the matching room_type.
-- Supported room types: bedroom, bathroom, kitchen, hallway, office, store, general.
+- Supported room types: bedroom, bathroom, kitchen, living, dining, hallway, office, store, general.
+- area_sqft is the size of EACH room in square feet, only if the user stated it
+  ("add a 150 sqft bathroom", "2 bedrooms of 200 sq ft each"). NEVER invent a size —
+  omit area_sqft when the user didn't give one; the app will ask them.
 - For budget amounts in lakh (e.g. "10 lakh"), convert to int (10 lakh = 1000000).
 - If unclear, set clarification_needed=true and provide a helpful clarification_message.
 
@@ -58,6 +62,17 @@ Return ONLY a valid JSON object, no markdown, no explanation:
 def _keyword_fallback(message: str) -> InterpretedAction:
     """Regex-based fallback parser when Gemini is unavailable."""
     msg = message.lower().strip()
+
+    # Pull out a room size ("150 sqft", "of 200 sq ft each") so the room
+    # patterns below don't have to account for it.
+    area_sqft = None
+    area_match = re.search(
+        r'(?:of\s+|each\s+)?(\d+)\s*(?:sq\.?\s*ft|sqft|sft|square\s*f(?:ee|oo)t|sq\s*feet)\b(?:\s+each)?',
+        msg,
+    )
+    if area_match:
+        area_sqft = int(area_match.group(1))
+        msg = re.sub(r'\s+', ' ', msg[:area_match.start()] + ' ' + msg[area_match.end():]).strip()
 
     # reset
     if re.search(r'\b(reset|start over|start fresh|new building|clear)\b', msg):
@@ -84,6 +99,17 @@ def _keyword_fallback(message: str) -> InterpretedAction:
     if multi_floor and not re.search(r'with|bedroom|kitchen|washroom|bathroom|office|living|dining', msg):
         return InterpretedAction(action="add_floors", params={"count": int(multi_floor.group(1))})
 
+    # add a <shape> floor — "add a pyramid floor", "add an l-shaped floor"
+    shaped = re.search(
+        r'add\s+(?:a\s+|an\s+|another\s+)?(rectangle|rectangular|square|pyramid|[lut][\s-]?shaped?|courtyard)\s+floor', msg
+    )
+    if shaped:
+        word = shaped.group(1)
+        shape = {"rectangular": "rectangle"}.get(word, word)
+        if re.fullmatch(r'[lut][\s-]?shaped?', word):
+            shape = f"{word[0]}-shape"
+        return InterpretedAction(action="add_floor", params={"shape": shape})
+
     # add a floor with specific rooms — preset command like "add a floor with 2 bedrooms, 1 kitchen..."
     # Strategy: create the floor first, then we handle rooms via separate calls from the frontend.
     # The fallback simply creates the floor; the frontend should chain individual room additions.
@@ -109,7 +135,10 @@ def _keyword_fallback(message: str) -> InterpretedAction:
     if add_rooms:
         count = int(add_rooms.group(1)) if add_rooms.group(1) else 1
         floor_n = add_rooms.group(2) or add_rooms.group(3)
-        return InterpretedAction(action="add_rooms", params={"floor_number": int(floor_n), "count": count})
+        params = {"floor_number": int(floor_n), "count": count}
+        if area_sqft:
+            params["area_sqft"] = area_sqft
+        return InterpretedAction(action="add_rooms", params=params)
 
     # remove N rooms from floor M
     rm_rooms = re.search(
@@ -127,6 +156,8 @@ def _keyword_fallback(message: str) -> InterpretedAction:
         "bedroom": ["bedroom", "bed room", "sleeping room"],
         "bathroom": ["bathroom", "bath room", "washroom", "toilet", "restroom", "wc"],
         "kitchen": ["kitchen", "kitchenette"],
+        "living": ["living room", "living", "lounge", "drawing room"],
+        "dining": ["dining room", "dining"],
         "hallway": ["hallway", "hall", "corridor", "passage"],
         "office": ["office", "work room", "study"],
         "store": ["store", "storage", "storeroom", "warehouse"],
@@ -158,10 +189,10 @@ def _keyword_fallback(message: str) -> InterpretedAction:
         elif len(groups) == 1:
             floor_n = int(groups[0])
         if floor_n is not None:
-            return InterpretedAction(
-                action="add_typed_room",
-                params={"floor_number": floor_n, "room_type": detected_type, "count": count},
-            )
+            params = {"floor_number": floor_n, "room_type": detected_type, "count": count}
+            if area_sqft:
+                params["area_sqft"] = area_sqft
+            return InterpretedAction(action="add_typed_room", params=params)
 
     # remove typed room — "remove bathroom from floor 2"
     for rtype, keywords in ROOM_KEYWORDS.items():
@@ -189,7 +220,7 @@ def _keyword_fallback(message: str) -> InterpretedAction:
         action="unknown",
         params={"reason": "command not recognized"},
         clarification_needed=True,
-        clarification_message="I didn't understand that. Try commands like 'add a floor', 'add bathroom to floor 1', or 'suggest improvements'.",
+        clarification_message="I didn't understand that. Try commands like 'add a floor', 'add a 80 sqft bathroom to floor 1', or 'suggest improvements'.",
     )
 
 

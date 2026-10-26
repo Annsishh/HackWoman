@@ -82,7 +82,7 @@ def _estimate_with_formula(
 ) -> tuple[MaterialsCostBreakdown, bool]:
     concrete = steel = glass = 0
     num_floors = len(current_state.floors)
-    room_sqft = current_state.constraints.defaultRoomSqft
+    room_sqft = params.get("area_sqft") or current_state.constraints.defaultRoomSqft
     cost_per_sqft = current_state.budget.costPerSqft
     
     room_c = int(room_sqft * cost_per_sqft * 0.60)
@@ -91,15 +91,15 @@ def _estimate_with_formula(
 
     if action in ("add_floor", "add_floors"):
         count = params.get("count", 1)
-        concrete = (_FLOOR_CONCRETE + room_c) * count  # 1 default room per floor
-        steel = (_FLOOR_STEEL + room_s) * count
-        glass = (_FLOOR_GLASS + room_g) * count
+        concrete = _FLOOR_CONCRETE * count  # floors start empty
+        steel = _FLOOR_STEEL * count
+        glass = _FLOOR_GLASS * count
         # Foundation scales with height
         for i in range(count):
             depth = num_floors + i + 1
             concrete += _FOUNDATION_PER_FLOOR * depth
 
-    elif action == "add_rooms":
+    elif action in ("add_rooms", "add_typed_room"):
         count = params.get("count", 1)
         concrete = room_c * count
         steel = room_s * count
