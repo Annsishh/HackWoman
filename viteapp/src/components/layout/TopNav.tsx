@@ -1,10 +1,11 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Settings, Bell, Search } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { useNotifications } from '../../context/NotificationsContext';
 import { ProfileDropdown } from '../auth/ProfileDropdown';
 import { NotificationsPanel } from './NotificationsPanel';
 import { SettingsPanel } from './SettingsPanel';
+import { getModelInfo } from '../../services/api';
 
 export type Page = 'home' | 'models' | 'datasets' | 'simulations';
 
@@ -21,6 +22,13 @@ export function TopNav({ currentPage, onNavigate, onOpenProfile }: TopNavProps) 
   const { unreadCount } = useNotifications();
   const [searchVal, setSearchVal] = useState('');
   const [openPanel, setOpenPanel] = useState<Panel>(null);
+  const [modelLoaded, setModelLoaded] = useState<boolean | null>(null);
+
+  useEffect(() => {
+    getModelInfo()
+      .then(info => setModelLoaded(info.cost_model.loaded && info.risk_model.loaded))
+      .catch(() => setModelLoaded(false));
+  }, []);
 
   const togglePanel = (p: Panel) => setOpenPanel(prev => (prev === p ? null : p));
 
@@ -48,6 +56,24 @@ export function TopNav({ currentPage, onNavigate, onOpenProfile }: TopNavProps) 
           ARCHI-MIND <span style={{ color: '#06b6d4' }}>AI</span>
         </span>
       </button>
+
+      {/* Model status badge */}
+      {modelLoaded !== null && (
+        <span
+          title={modelLoaded ? 'Cost & structural-risk ML models loaded and serving' : 'ML models unavailable — using fallback formulas (run model/train_*.py)'}
+          style={{
+            display: 'inline-flex', alignItems: 'center', gap: '0.35rem',
+            fontSize: '0.62rem', fontWeight: 700,
+            color: modelLoaded ? '#10b981' : '#f59e0b',
+            background: modelLoaded ? 'rgba(16,185,129,0.1)' : 'rgba(245,158,11,0.1)',
+            border: `1px solid ${modelLoaded ? 'rgba(16,185,129,0.3)' : 'rgba(245,158,11,0.3)'}`,
+            borderRadius: '20px', padding: '0.2rem 0.65rem', whiteSpace: 'nowrap',
+          }}
+        >
+          <span style={{ width: '5px', height: '5px', borderRadius: '50%', background: modelLoaded ? '#10b981' : '#f59e0b' }} />
+          {modelLoaded ? 'Model Loaded' : 'Fallback Mode'}
+        </span>
+      )}
 
       {/* Nav */}
       <nav style={{ display: 'flex', gap: '0.25rem' }}>

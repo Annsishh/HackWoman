@@ -39,6 +39,7 @@ export function ConfigurationModal({ onComplete }: ConfigurationModalProps) {
           total_budget: totalBudgetInr,
           default_room_sqft: sqftVal,
           shape,
+          district_id: districtId,
         }),
       });
 

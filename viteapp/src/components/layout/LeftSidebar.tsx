@@ -135,6 +135,7 @@ function QuickCommandsPanel() {
   const call = async (msg: string) => {
     const res = await sendMessage(msg);
     if (res.updatedState) dispatch({ type: 'SET_STATE', payload: res.updatedState });
+    if (res.structuralRisk !== undefined) dispatch({ type: 'SET_RISK', payload: res.structuralRisk });
     return res;
   };
 

@@ -1,0 +1,56 @@
+{
+  "trained_at": "2026-10-26T09:28:12.199564+00:00",
+  "n_samples": 8000,
+  "accuracy": 0.995,
+  "f1": 0.9921259842519685,
+  "auc": 0.9992582057050561,
+  "feature_names": [
+    "num_floors",
+    "total_rooms",
+    "max_room_density",
+    "room_count_std",
+    "seismic_zone",
+    "soil_type",
+    "pga",
+    "structural_wind_index",
+    "avg_altitude_m"
+  ],
+  "top_features": [
+    {
+      "name": "pga",
+      "importance": 0.3704116276336837
+    },
+    {
+      "name": "seismic_zone",
+      "importance": 0.2748149426515056
+    },
+    {
+      "name": "soil_type",
+      "importance": 0.19239254288202998
+    },
+    {
+      "name": "num_floors",
+      "importance": 0.14492800313814022
+    },
+    {
+      "name": "structural_wind_index",
+      "importance": 0.007820959751000644
+    },
+    {
+      "name": "avg_altitude_m",
+      "importance": 0.007620497948011231
+    },
+    {
+      "name": "room_count_std",
+      "importance": 0.0012451613103652312
+    },
+    {
+      "name": "total_rooms",
+      "importance": 0.0006815225849204545
+    },
+    {
+      "name": "max_room_density",
+      "importance": 8.474210034285872e-05
+    }
+  ]
+}

@@ -1,9 +1,35 @@
+# Python
 __pycache__/
-*.pyc
+*.py[cod]
 venv/
+.venv/
+*.egg-info/
+.pytest_cache/
+
+# Secrets — keep the *.example templates
 .env
+.env.*
+!.env.example
+!.env.*.example
+*.local
+
+# Node / build output
 node_modules/
 dist/
+
+# Logs
+*.log
+
+# OS / editor
+.DS_Store
+Thumbs.db
+desktop.ini
+.idea/
+.vscode/*
+!.vscode/extensions.json
+
+# Tooling
 .agents/
 .stitch/
-skills-lock.json
+.claude/
+skills-lock.json

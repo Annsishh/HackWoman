@@ -35,6 +35,14 @@ export interface ChatResponse {
   actionLog: HistoryEntry | null;
   animationHint: AnimationHint | null;
   costBreakdown: MaterialsCostBreakdown | null;
+  structuralRisk: number | null;
+}
+
+export interface ModelInfo {
+  ml_dependencies_available: boolean;
+  districts_loaded: number;
+  cost_model: { loaded: boolean; meta: Record<string, unknown> | null };
+  risk_model: { loaded: boolean; meta: Record<string, unknown> | null };
 }
 
 // ── Internal fetch helper ────────────────────────────────────────────────────
@@ -90,4 +98,9 @@ export async function checkHealth(): Promise<boolean> {
   } catch {
     return false;
   }
+}
+
+/** Verifies whether the trained cost/risk models are loaded and serving. */
+export async function getModelInfo(): Promise<ModelInfo> {
+  return request<ModelInfo>('/api/model-info');
 }

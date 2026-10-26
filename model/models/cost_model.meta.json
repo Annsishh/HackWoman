@@ -1,0 +1,111 @@
+{
+  "trained_at": "2026-10-26T09:28:40.232470+00:00",
+  "n_samples": 8000,
+  "mae": 20110.654768140907,
+  "rmse": 37039.886420439616,
+  "r2": 0.9975687189199708,
+  "feature_names": [
+    "num_floors_before",
+    "total_rooms_before",
+    "total_sqft_before",
+    "action_count",
+    "is_add_floor",
+    "is_add_rooms",
+    "is_remove_floor",
+    "is_remove_rooms",
+    "frac_bedroom",
+    "frac_bathroom",
+    "frac_kitchen",
+    "frac_hallway",
+    "frac_office",
+    "frac_store",
+    "frac_general",
+    "seismic_zone",
+    "soil_type",
+    "structural_wind_index",
+    "avg_tariff_per_unit",
+    "avg_altitude_m"
+  ],
+  "top_features": [
+    {
+      "name": "is_add_floor",
+      "importance": 0.7317331624872178
+    },
+    {
+      "name": "action_count",
+      "importance": 0.2531951223757575
+    },
+    {
+      "name": "num_floors_before",
+      "importance": 0.0032125092917148533
+    },
+    {
+      "name": "seismic_zone",
+      "importance": 0.002666487873949189
+    },
+    {
+      "name": "is_remove_rooms",
+      "importance": 0.002599333878147857
+    },
+    {
+      "name": "is_add_rooms",
+      "importance": 0.002063009110066705
+    },
+    {
+      "name": "avg_tariff_per_unit",
+      "importance": 0.0010645206722713527
+    },
+    {
+      "name": "structural_wind_index",
+      "importance": 0.0009196164442983273
+    },
+    {
+      "name": "is_remove_floor",
+      "importance": 0.0007388431623017048
+    },
+    {
+      "name": "soil_type",
+      "importance": 0.0006874541056532442
+    },
+    {
+      "name": "avg_altitude_m",
+      "importance": 0.0006775094291321653
+    },
+    {
+      "name": "total_sqft_before",
+      "importance": 8.967830753551292e-05
+    },
+    {
+      "name": "frac_bathroom",
+      "importance": 6.856886702139726e-05
+    },
+    {
+      "name": "frac_office",
+      "importance": 5.1249630857984365e-05
+    },
+    {
+      "name": "frac_hallway",
+      "importance": 4.99393551173542e-05
+    },
+    {
+      "name": "frac_general",
+      "importance": 4.5657094864039164e-05
+    },
+    {
+      "name": "frac_bedroom",
+      "importance": 3.6062147104705046e-05
+    },
+    {
+      "name": "frac_kitchen",
+      "importance": 3.546244674557451e-05
+    },
+    {
+      "name": "frac_store",
+      "importance": 3.3617544943065025e-05
+    },
+    {
+      "name": "total_rooms_before",
+      "importance": 3.2195775299923985e-05
+    }
+  ]
+}

@@ -1,12 +1,16 @@
 """
 Materials Cost Estimator — MCP Tool: estimate_materials_cost
 
-Calculates granular material costs for a proposed action:
-  - Concrete, Steel, Glass per room and per floor structure
-  - Foundation premium that scales with building height
-  - Returns total cost and whether it fits within budget
+Calculates granular material costs for a proposed action. Tries the trained
+regression model in /model first (region/seismic/soil-aware); if it isn't
+available (not trained yet, or scikit-learn missing) falls back to the
+original hardcoded formula below so the app never breaks.
 """
+import logging
 from models.building import BuildingState, MaterialsCostBreakdown
+from services.ml_loader import predict_cost
+
+logger = logging.getLogger(__name__)
 
 
 # Floor structure (shell, no rooms)
@@ -28,6 +32,54 @@ def estimate_materials_cost(
     Input:  { action, params, buildingState }
     Output: (MaterialsCostBreakdown, within_budget: bool)
     """
+    if action == "set_budget":
+        return MaterialsCostBreakdown(concrete=0, steel=0, glass=0, total=0), True
+
+    ml_result = _estimate_with_model(action, params, current_state)
+    if ml_result is not None:
+        return ml_result
+
+    logger.info("materials cost: ML model unavailable, using fallback formula")
+    return _estimate_with_formula(action, params, current_state)
+
+
+def _estimate_with_model(
+    action: str,
+    params: dict,
+    current_state: BuildingState,
+) -> tuple[MaterialsCostBreakdown, bool] | None:
+    num_floors_before = len(current_state.floors)
+    total_rooms_before = sum(len(f.rooms) for f in current_state.floors)
+    total_sqft_before = sum(r.area_sqft for f in current_state.floors for r in f.rooms)
+    room_type_counts: dict[str, int] = {}
+    for f in current_state.floors:
+        for r in f.rooms:
+            room_type_counts[r.type] = room_type_counts.get(r.type, 0) + 1
+    action_count = params.get("count", 1)
+    district_id = current_state.constraints.district_id
+
+    predicted_total = predict_cost(
+        num_floors_before, total_rooms_before, total_sqft_before,
+        action, action_count, room_type_counts, district_id,
+    )
+    if predicted_total is None:
+        return None
+
+    logger.info("materials cost predicted via ML model: %.0f (district=%s)", predicted_total, district_id)
+    total = max(0, int(round(predicted_total)))
+    concrete = int(total * 0.60)
+    steel = int(total * 0.30)
+    glass = total - concrete - steel  # remainder keeps the breakdown exact
+
+    within_budget = total <= current_state.budget.remaining
+    return MaterialsCostBreakdown(concrete=concrete, steel=steel, glass=glass, total=total), within_budget
+
+
+def _estimate_with_formula(
+    action: str,
+    params: dict,
+    current_state: BuildingState,
+) -> tuple[MaterialsCostBreakdown, bool]:
     concrete = steel = glass = 0
     num_floors = len(current_state.floors)
     room_sqft = current_state.constraints.defaultRoomSqft
@@ -64,9 +116,6 @@ def estimate_materials_cost(
             concrete = int(room_c * count * 0.20)
             steel = int(room_s * count * 0.20)
             glass = int(room_g * count * 0.20)
-
-    elif action == "set_budget":
-        return MaterialsCostBreakdown(concrete=0, steel=0, glass=0, total=0), True
 
     total = concrete + steel + glass
     within_budget = total <= current_state.budget.remaining

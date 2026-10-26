@@ -57,6 +57,7 @@ class Constraints(BaseModel):
     minRoomsPerFloor: int = 1
     defaultRoomSqft: int = 500
     shape: str = "rectangle"
+    district_id: str = "bengaluru-urban"
 
 
 class HistoryEntry(BaseModel):
@@ -104,6 +105,7 @@ class ChatResponse(BaseModel):
     actionLog: Optional[HistoryEntry] = None
     animationHint: Optional[AnimationHint] = None
     costBreakdown: Optional[MaterialsCostBreakdown] = None
+    structuralRisk: Optional[float] = None
 
 
 class InterpretedAction(BaseModel):

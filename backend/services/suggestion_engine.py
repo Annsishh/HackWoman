@@ -6,7 +6,10 @@ building state, what action was just taken, and any constraint violations.
 """
 from models.building import BuildingState
 from services.materials_estimator import format_cost
+from services.structural_inspector import structural_risk_score
 from typing import Optional
+
+_RISK_ADVISORY_THRESHOLD = 0.35
 
 
 def generate_suggestions(
@@ -58,6 +61,14 @@ def generate_suggestions(
     # --- Empty building ---
     if n_floors == 0:
         return ["Add your first floor to get started!", "Type 'add a floor' to begin."]
+
+    # --- ML structural risk advisory (additive, never blocks an action) ---
+    risk = structural_risk_score(state)
+    if risk is not None and risk >= _RISK_ADVISORY_THRESHOLD:
+        suggestions.insert(0, (
+            f"⚠️ Estimated {risk:.0%} structural risk score (seismic zone/soil factors for this district). "
+            "Consider a reinforced or raft foundation."
+        ))
 
     # --- Floors with no rooms (shouldn't happen but defensive) ---
     empty_floors = [f for f in floors if len(f.rooms) == 0]

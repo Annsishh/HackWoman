@@ -5,8 +5,15 @@ Ensures the building obeys physics:
   1. No floating overhangs — an upper floor cannot have MORE rooms than the
      floor directly below it.
   2. The ground floor must have >= rooms than every floor above it.
+
+These are hard geometric invariants and stay deterministic — see
+IMPLEMENTATION_MODEL.md section 2 for why this correctness check is NOT
+replaced by a model. structural_risk_score() below is a separate, additive,
+non-blocking ML signal layered on top.
 """
+import statistics
 from models.building import BuildingState, ValidationResult
+from services.ml_loader import predict_risk
 
 
 def check_structural_integrity(proposed_state: BuildingState) -> ValidationResult:
@@ -124,3 +131,24 @@ def check_structural_integrity_for_action(
             )
 
     return ValidationResult(valid=True)
+
+
+def structural_risk_score(state: BuildingState) -> float | None:
+    """
+    Additive, non-blocking ML risk signal (0-1) estimating settlement/seismic
+    risk from seismic zone, soil type, and load distribution — returns None
+    if the model hasn't been trained yet (see model/README.md). This never
+    blocks an action; it only annotates suggestions.
+    """
+    floors = state.floors
+    if not floors:
+        return None
+
+    room_counts = [len(f.rooms) for f in floors]
+    num_floors = len(floors)
+    total_rooms = sum(room_counts)
+    max_density = max(room_counts)
+    room_std = statistics.pstdev(room_counts) if len(room_counts) > 1 else 0.0
+    district_id = state.constraints.district_id
+
+    return predict_risk(num_floors, total_rooms, max_density, room_std, district_id)

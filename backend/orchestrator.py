@@ -20,7 +20,7 @@ from models.building import (
     AnimationHint,
 )
 from services.intent_interpreter import interpret_command
-from services.structural_inspector import check_structural_integrity_for_action
+from services.structural_inspector import check_structural_integrity_for_action, structural_risk_score
 from services.compliance_service import check_compliance_for_action
 from services.materials_estimator import estimate_materials_cost, format_cost
 from services.suggestion_engine import generate_suggestions
@@ -165,6 +165,7 @@ async def process_message(message: str, state: BuildingState) -> ChatResponse:
         actionLog=log_entry,
         animationHint=animation,
         costBreakdown=cost_breakdown if cost_breakdown.total > 0 else None,
+        structuralRisk=structural_risk_score(new_state),
     )
 
 

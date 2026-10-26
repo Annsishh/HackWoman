@@ -12,6 +12,13 @@ interface Message {
   timestamp: Date;
   type?: ChatResponse['message_type'];
   suggestions?: string[];
+  structuralRisk?: number | null;
+}
+
+function riskColor(risk: number): string {
+  if (risk >= 0.5) return '#ef4444';
+  if (risk >= 0.25) return '#f59e0b';
+  return '#10b981';
 }
 
 const SESSION_ID = `${Math.floor(Math.random() * 9000 + 1000)}-ARCH`;
@@ -59,6 +66,9 @@ export function ChatPanel() {
       if (res.updatedState) {
         dispatch({ type: 'SET_STATE', payload: res.updatedState });
       }
+      if (res.structuralRisk !== undefined) {
+        dispatch({ type: 'SET_RISK', payload: res.structuralRisk });
+      }
       const aiMsg: Message = {
         id: `a-${Date.now()}`,
         role: 'ai',
@@ -66,6 +76,7 @@ export function ChatPanel() {
         timestamp: new Date(),
         type: res.message_type,
         suggestions: res.suggestions?.slice(0, 4) ?? [],
+        structuralRisk: res.structuralRisk,
       };
       setMessages(prev => [...prev, aiMsg]);
     } catch (err) {
@@ -226,6 +237,21 @@ export function ChatPanel() {
                   <Bot size={10} color="#06b6d4" />
                   AI CORE • {formatTime(msg.timestamp)}
                 </div>
+
+                {/* ML structural risk badge — proof the model is live */}
+                {msg.structuralRisk !== null && msg.structuralRisk !== undefined && (
+                  <div style={{
+                    display: 'inline-flex', alignItems: 'center', gap: '0.35rem',
+                    background: `${riskColor(msg.structuralRisk)}12`,
+                    border: `1px solid ${riskColor(msg.structuralRisk)}40`,
+                    borderRadius: '20px', padding: '0.2rem 0.6rem',
+                    fontSize: '0.65rem', fontWeight: 700, color: riskColor(msg.structuralRisk),
+                    width: 'fit-content',
+                  }}>
+                    <div style={{ width: '5px', height: '5px', borderRadius: '50%', background: riskColor(msg.structuralRisk) }} />
+                    ML Structural Risk: {Math.round(msg.structuralRisk * 100)}%
+                  </div>
+                )}
 
                 {/* Suggestion chips */}
                 {msg.suggestions && msg.suggestions.length > 0 && (

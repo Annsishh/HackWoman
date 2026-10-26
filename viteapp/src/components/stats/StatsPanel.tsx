@@ -48,7 +48,7 @@ function DonutChart({ segments }: { segments: { color: string; pct: number }[] }
 
 export function StatsPanel() {
   const { state } = useBuilding();
-  const { floors, budget } = state;
+  const { floors, budget, structuralRisk } = state;
 
   const totalFloors = floors.length;
   const totalRooms = floors.reduce((s, f) => s + f.rooms.length, 0);
@@ -241,6 +241,44 @@ export function StatsPanel() {
             </div>
           ))}
         </div>
+
+        {/* ── ML Structural Risk ── */}
+        {structuralRisk !== null && (
+          <>
+            <div style={{
+              background: structuralRisk >= 0.5 ? 'rgba(239,68,68,0.06)' : structuralRisk >= 0.25 ? 'rgba(245,158,11,0.06)' : 'rgba(16,185,129,0.06)',
+              border: `1px solid ${structuralRisk >= 0.5 ? 'rgba(239,68,68,0.15)' : structuralRisk >= 0.25 ? 'rgba(245,158,11,0.15)' : 'rgba(16,185,129,0.15)'}`,
+              borderRadius: '8px',
+              padding: '0.75rem',
+            }}>
+              <div style={{ fontSize: '0.6rem', fontWeight: 700, letterSpacing: '0.12em', color: 'var(--text-tertiary)', marginBottom: '0.4rem' }}>
+                ML STRUCTURAL RISK
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <span style={{
+                  fontSize: '1.5rem',
+                  fontWeight: 800,
+                  color: structuralRisk >= 0.5 ? '#ef4444' : structuralRisk >= 0.25 ? '#f59e0b' : '#10b981',
+                }}>
+                  {Math.round(structuralRisk * 100)}%
+                </span>
+                <span style={{ fontSize: '0.6rem', color: 'var(--text-tertiary)' }}>
+                  seismic + soil + wind
+                </span>
+              </div>
+              <div style={{ marginTop: '0.4rem', height: '4px', background: 'rgba(255,255,255,0.05)', borderRadius: '2px', overflow: 'hidden' }}>
+                <div style={{
+                  height: '100%',
+                  width: `${Math.round(structuralRisk * 100)}%`,
+                  background: structuralRisk >= 0.5 ? '#ef4444' : structuralRisk >= 0.25 ? '#f59e0b' : '#10b981',
+                  borderRadius: '2px',
+                  transition: 'width 0.5s ease',
+                }} />
+              </div>
+            </div>
+            <Divider />
+          </>
+        )}
 
         {/* ── Health Score ── */}
         <div style={{

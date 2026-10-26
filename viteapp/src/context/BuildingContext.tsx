@@ -38,6 +38,7 @@ export interface BuildingState {
   constraints: Constraints;
   history: Array<{ action: string; timestamp: string; details: string }>;
   district: DistrictData;
+  structuralRisk: number | null;
 }
 
 // --- Initial State ---
@@ -62,25 +63,31 @@ const initialState: BuildingState = {
   },
   history: [],
   district: getDefaultDistrict(),
+  structuralRisk: null,
 };
 
 // --- Actions ---
 export type BuildingAction =
   | { type: 'SET_STATE'; payload: BuildingState }
   | { type: 'SET_DISTRICT'; payload: DistrictData }
+  | { type: 'SET_RISK'; payload: number | null }
   | { type: 'RESET' };
 
 // --- Reducer ---
 function buildingReducer(state: BuildingState, action: BuildingAction): BuildingState {
   switch (action.type) {
     case 'SET_STATE':
-      return { ...action.payload, district: action.payload.district ?? state.district };
+      // backend BuildingState payloads don't carry district/structuralRisk — preserve them
+      return { ...action.payload, district: action.payload.district ?? state.district, structuralRisk: state.structuralRisk };
     case 'SET_DISTRICT':
       return { ...state, district: action.payload };
+    case 'SET_RISK':
+      return { ...state, structuralRisk: action.payload };
     case 'RESET':
       return {
         ...initialState,
         district: state.district,
+        structuralRisk: null,
         budget: {
           ...initialState.budget,
           total: state.budget.total,
