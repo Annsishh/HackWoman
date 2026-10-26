@@ -424,6 +424,8 @@ def set_walls(state: BuildingState, exterior_in: float, interior_in: float) -> t
 def set_location(state: BuildingState, site: SiteLocation) -> tuple[BuildingState, HistoryEntry]:
     """Move the building to a resolved site; the district drives risk, simulations and regional cost."""
     state = deepcopy(state)
+    if state.location is not None:  # moving the pin keeps the way the house was turned
+        site = site.model_copy(update={"heading_deg": state.location.heading_deg})
     state.location = site
     state.constraints.district_id = site.district_id
     state = _recalculate_budget(state)

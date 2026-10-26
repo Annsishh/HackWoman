@@ -1,9 +1,10 @@
 import { useState, useRef, useCallback, useMemo, useEffect } from 'react';
-import { RotateCcw, ZoomIn, ZoomOut, Plus, Eye, EyeOff, Layers, LayoutGrid, Maximize2, Minimize2, Box, Square } from 'lucide-react';
+import { RotateCcw, ZoomIn, ZoomOut, Plus, Eye, EyeOff, Layers, LayoutGrid, MapPin, Maximize2, Minimize2, Box, Square } from 'lucide-react';
 import { useBuilding } from '../../context/BuildingContext';
 import { sendMessage } from '../../services/api';
 import { siteCoords } from '../../services/liveData';
 import { FloorPlanEditor } from '../planner/FloorPlanEditor';
+import { SiteMapView } from './SiteMapView';
 import { ROOM_META, SITE_META, roomMeta, insideUnion, overlaps } from '../../utils/rooms';
 import { userWindows } from '../../utils/walls';
 import { placeRoom, updateRoom } from '../../services/api';
@@ -617,6 +618,7 @@ export function BuildingVisualizer() {
   // Why "Add Floor" was refused (e.g. not enough budget), shown as a popup
   const [blocked, setBlocked] = useState<{ title: string; message: string; budget: boolean } | null>(null);
   const [planOpen, setPlanOpen] = useState(false);
+  const [mapOpen, setMapOpen] = useState(false);
   // Click-to-place in 3D; the design panel on the left arms it
   const { placing, setPlacing, focusFloor, setFocusFloor, setNotice, wallsPulse } = useDesign();
   const [hoverFt, setHoverFt] = useState<{ x: number; z: number } | null>(null);
@@ -1124,6 +1126,7 @@ export function BuildingVisualizer() {
         <ToolBtn icon={<ZoomIn size={15} />} label="Zoom In" onClick={() => setZoom(z => Math.min(z + 0.15, 3))} />
         <ToolBtn icon={<Plus size={18} />} label="Add Floor" accent loading={adding} onClick={handleAddFloor} />
         <ToolBtn icon={<LayoutGrid size={15} />} label="Floor Plan" onClick={() => setPlanOpen(true)} active={planOpen} />
+        <ToolBtn icon={<MapPin size={15} />} label="Map" onClick={() => setMapOpen(true)} active={mapOpen} />
         <ToolBtn icon={<ZoomOut size={15} />} label="Zoom Out" onClick={() => setZoom(z => Math.max(z - 0.15, 0.3))} />
         <ToolBtn
           icon={showLabels ? <Eye size={15} /> : <EyeOff size={15} />}
@@ -1135,6 +1138,7 @@ export function BuildingVisualizer() {
       </div>
 
       {planOpen && <FloorPlanEditor onClose={() => setPlanOpen(false)} />}
+      {mapOpen && <SiteMapView onClose={() => setMapOpen(false)} />}
 
       {blocked && (
         <div role="dialog" aria-modal="true" onClick={() => setBlocked(null)}

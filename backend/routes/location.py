@@ -6,6 +6,7 @@ from pydantic import BaseModel, Field, model_validator
 from models.building import BOQBreakdown, BuildingState, ChatResponse
 from orchestrator import set_location
 from services.boq_estimator import estimate_boq
+from services.location_resolver import resolve_query
 import services.building_engine as engine
 import services.sor_rates as sor
 from state.store import store
@@ -37,6 +38,33 @@ async def set_site_location(req: LocationRequest) -> ChatResponse:
     if response.updatedState is not None:
         store.set(response.updatedState)
     return response
+
+
+@router.get("/location/geocode")
+async def geocode(q: str) -> dict:
+    """Find a place without moving the building (the map flies there; a click places the house)."""
+    if not q.strip():
+        raise HTTPException(400, "Empty query.")
+    site = await resolve_query(q.strip())
+    if site is None:
+        raise HTTPException(404, f"Couldn't find '{q.strip()}'.")
+    return {"lat": site.lat, "lng": site.lng, "address": site.address, "district_id": site.district_id}
+
+
+class HeadingRequest(BaseModel):
+    heading_deg: float = Field(ge=0, lt=360)
+
+
+@router.put("/location/heading", response_model=BuildingState)
+async def set_heading(req: HeadingRequest) -> BuildingState:
+    """Turn the building on its site so its front faces the road (map view)."""
+    state = store.get()
+    if state.location is None:
+        raise HTTPException(400, "Mark the site on the map first.")
+    new_state = state.model_copy(deep=True)
+    new_state.location.heading_deg = req.heading_deg
+    store.set(new_state)
+    return new_state
 
 
 @router.get("/estimate/boq", response_model=BOQBreakdown)

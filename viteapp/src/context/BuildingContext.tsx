@@ -98,6 +98,8 @@ export interface SiteLocation {
   source: 'gps' | 'search' | 'map' | 'coords';
   approximated: boolean;
   offline: boolean;
+  /** Compass bearing the front (road side) faces: 0 = north, 90 = east */
+  heading_deg?: number;
 }
 
 export interface BuildingState {

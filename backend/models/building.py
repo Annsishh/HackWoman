@@ -169,6 +169,8 @@ class SiteLocation(BaseModel):
     approximated: bool = False
     # True when the geocoder couldn't be reached and the district came from distance alone
     offline: bool = False
+    # Compass bearing the front (road side) of the building faces: 0 = north, 90 = east
+    heading_deg: float = 0
 
 
 class HistoryEntry(BaseModel):

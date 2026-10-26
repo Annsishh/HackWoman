@@ -240,6 +240,11 @@ export async function setLocation(
   return request<ChatResponse>('/api/location', { method: 'POST', body: JSON.stringify(loc) });
 }
 
+/** Turn the building on its site (compass bearing its front faces). */
+export async function setHeading(headingDeg: number): Promise<BuildingState> {
+  return request<BuildingState>('/api/location/heading', { method: 'PUT', body: JSON.stringify({ heading_deg: headingDeg }) });
+}
+
 /** Ask the browser for the user's position (needs their permission). */
 export function getBrowserPosition(): Promise<{ lat: number; lng: number }> {
   return new Promise((resolve, reject) => {
@@ -335,4 +340,9 @@ export async function fetchSeismicAnalysis(opts: {
     soil: opts.soil, frame: opts.frame, importance: String(opts.importance), infill: String(opts.infill),
   });
   return request<SeismicReport>(`/api/analysis/seismic?${params}`);
+}
+
+/** Look up a place without moving the building. */
+export async function geocode(query: string): Promise<{ lat: number; lng: number; address: string; district_id: string }> {
+  return request(`/api/location/geocode?q=${encodeURIComponent(query)}`);
 }
