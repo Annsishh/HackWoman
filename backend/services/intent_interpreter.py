@@ -280,24 +280,26 @@ _QUESTION_RE = re.compile(r"\?\s*$|^\s*(what|why|how|which|when|where|who|can|co
 def _context(state: BuildingState) -> str:
     """Building, site and cost context for Gemini."""
     from services.boq_estimator import estimate_boq
-    from services.ml_loader import get_district
-    from services.structural_inspector import structural_risk_score
-    d = get_district(state.constraints.district_id) or {}
+    from services.seismic_analysis import seismic_demand, site_of, zone_at
+    from services.site_profile import basic_wind_speed
     parts = [_building_summary(state)]
-    if d:
-        parts.append(
-            f"District: {d['name']} (seismic zone {d['seismicZone']}, PGA {d['pga']}g, {d['soilType']} soil, "
-            f"wind index {d['structuralWindIndex']}/10, climate {d['climateZone']})."
-        )
+    lat, lon, in_ka, _, _ = site_of(state)
+    zone = zone_at(lat, lon, in_ka)
+    vb = basic_wind_speed(lat, lon) if in_ka else None
+    parts.append(
+        f"District: {state.constraints.district_id} (seismic zone {zone['zone'] or 'unknown'}"
+        + (f", Z = {zone['Z']}" if zone["Z"] else "") + " per IS 1893:2016"
+        + (f"; basic wind speed {vb} m/s per IS 875-3" if vb else "") + ")."
+    )
     if state.location:
         parts.append(f"Site: {state.location.address or f'{state.location.lat}, {state.location.lng}'}.")
     if state.floors:
         boq = estimate_boq(state)
-        risk = structural_risk_score(state)
+        demand = seismic_demand(state)
         parts.append(
             f"KPWD Schedule of Rates estimate: Rs {boq.total:,} for {boq.plinth_area_m2} m2 plinth "
             f"({boq.placeholders_used} placeholder rates)."
-            + (f" ML structural risk score: {risk:.0%}." if risk is not None else "")
+            + (f" IS 1893 design base shear: {demand:.1%} of building weight (medium soil assumed)." if demand is not None else "")
         )
     return " ".join(parts)
 

@@ -20,13 +20,14 @@ from models.building import (
     AnimationHint,
 )
 from services.intent_interpreter import interpret_command
-from services.structural_inspector import check_structural_integrity_for_action, structural_risk_score
+from services.structural_inspector import check_structural_integrity_for_action
+from services.seismic_analysis import seismic_demand, zone_at
+from services.site_profile import basic_wind_speed
 from services.compliance_service import check_compliance_for_action
 from services.materials_estimator import estimate_materials_cost, format_cost
 from services.suggestion_engine import generate_suggestions
 from services.geometry import SHAPES, footprints_for, support_error
 from services.location_resolver import resolve_coords, resolve_query
-from services.ml_loader import get_district
 import services.building_engine as engine
 
 logger = logging.getLogger(__name__)
@@ -196,7 +197,7 @@ async def process_message(message: str, state: BuildingState) -> ChatResponse:
         actionLog=log_entry,
         animationHint=animation,
         costBreakdown=cost_breakdown if cost_breakdown.total > 0 else None,
-        structuralRisk=structural_risk_score(new_state),
+        seismicDemand=seismic_demand(new_state),
     )
 
 
@@ -227,13 +228,18 @@ async def set_location(params: dict, state: BuildingState, source: str | None = 
             )
 
     new_state, log_entry = engine.set_location(state, site)
-    district = get_district(site.district_id) or {}
-    name = district.get("name", site.district_id)
+    name = site.reported_district or site.district_id
     place = site.address.split(",")[0] if site.address else f"{site.lat:.4f}, {site.lng:.4f}"
     lines = [f"📍 Site set to **{place}** → {name} district"]
-    if district:
-        lines[0] += (f" (Seismic Zone {district['seismicZone']}, {district['soilType'].lower()} soil, "
-                     f"wind index {district['structuralWindIndex']:g}/10).")
+    zone = zone_at(site.lat, site.lng, site.in_karnataka)
+    vb = basic_wind_speed(site.lat, site.lng) if site.in_karnataka else None
+    facts = []
+    if zone["zone"]:
+        facts.append(f"Seismic Zone {zone['zone']}, Z = {zone['Z']} (IS 1893)")
+    if vb:
+        facts.append(f"basic wind speed {vb} m/s (IS 875-3)")
+    if facts:
+        lines[0] += f" ({', '.join(facts)})."
     if not site.in_karnataka:
         lines.append("⚠️ This point is outside Karnataka. KPWD rates only apply within the state, so the "
                      f"estimate uses the nearest supported district, {name}.")
@@ -257,7 +263,7 @@ async def set_location(params: dict, state: BuildingState, source: str | None = 
         updatedState=new_state,
         suggestions=generate_suggestions(new_state)[:3],
         actionLog=log_entry,
-        structuralRisk=structural_risk_score(new_state),
+        seismicDemand=seismic_demand(new_state),
     )
 
 

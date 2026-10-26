@@ -252,7 +252,8 @@ class ChatResponse(BaseModel):
     actionLog: Optional[HistoryEntry] = None
     animationHint: Optional[AnimationHint] = None
     costBreakdown: Optional[MaterialsCostBreakdown] = None
-    structuralRisk: Optional[float] = None
+    # Design base shear as a fraction of seismic weight, IS 1893:2016 (services/seismic_analysis.seismic_demand)
+    seismicDemand: Optional[float] = None
     # Something only the browser can do, e.g. "request_geolocation"
     clientAction: Optional[str] = None
 

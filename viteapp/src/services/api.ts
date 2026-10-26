@@ -266,3 +266,73 @@ export async function getBoq(): Promise<BOQBreakdown> {
 export async function setIncludeGst(include: boolean): Promise<BuildingState> {
   return request<BuildingState>('/api/estimate/gst', { method: 'PUT', body: JSON.stringify({ include }) });
 }
+
+// ── Seismic analysis (IS 1893 (Part 1):2016, backend/services/seismic_analysis.py) ──
+
+export type SoilType = 'I' | 'II' | 'III';
+
+export interface SeismicDirection {
+  direction: string;
+  d_m: number;
+  Ta_s: number;
+  Ta_rule: string;
+  Sa_g: number;
+  Ah: number;
+  Ah_min: number;
+  min_governs: boolean;
+  VB_kN: number;
+  VB_percent_W: number;
+  overturning_kNm: number;
+  forces: { level: number; Q_kN: number; V_kN: number }[];
+}
+
+export interface SeismicAnalysis {
+  error?: string;
+  soil: SoilType;
+  soil_name: string;
+  frame: 'OMRF' | 'SMRF';
+  R: number;
+  I: number;
+  infill: boolean;
+  height_m: number;
+  storey_height_m: number;
+  W_kN: number;
+  levels: { level: number; h_m: number; W_kN: number; dead_kN: number; imposed_kN: number }[];
+  storeys: { floor: number; area_m2: number; ext_wall_m: number; int_wall_m: number; walls_kN: number; slab_kN: number }[];
+  directions: SeismicDirection[];
+  governing: string;
+  checks: { ok: boolean; rule: string; detail: string }[];
+  inputs: { name: string; value: string | number; source: string }[];
+  assumptions: string[];
+}
+
+export interface SeismicReport {
+  site: { lat: number; lon: number; label: string; source: string };
+  zone: { zone: string | null; Z: number | null; basis: string[] };
+  soil_texture: { available: boolean; reason: string; clay?: number; sand?: number; silt?: number; depth?: string; suggested?: SoilType };
+  soil_used: SoilType | null;
+  soil_source: string;
+  earthquakes: {
+    radius_km: number;
+    usgs: { magnitude: number; mag_type: string; place: string; time: number; distance_km: number; url: string }[];
+    usgs_error: string | null;
+    map_events: { magnitude: number; year: number; lat: number; lon: number; distance_km: number }[];
+  };
+  sources: {
+    zone_map: { url: string; title: string; publisher: string; basis: string; sha256: string; retrieved: string };
+    annex_e: { url: string; title: string; publisher: string; pdf_page: number; retrieved: string };
+    usgs: string;
+    soilgrids: string;
+    code: string;
+  };
+  analysis: SeismicAnalysis | { error: string };
+}
+
+export async function fetchSeismicAnalysis(opts: {
+  soil: SoilType | 'auto'; frame: 'OMRF' | 'SMRF'; importance: number; infill: boolean;
+}): Promise<SeismicReport> {
+  const params = new URLSearchParams({
+    soil: opts.soil, frame: opts.frame, importance: String(opts.importance), infill: String(opts.infill),
+  });
+  return request<SeismicReport>(`/api/analysis/seismic?${params}`);
+}

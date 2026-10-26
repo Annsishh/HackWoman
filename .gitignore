@@ -54,6 +54,10 @@ backend/state/building_state.tmp
 # in backend/data/sor/ is committed; regenerate it with backend/scripts/parse_kpwd_sor.py
 backend/data/sor/*.pdf
 
+# Official PDFs downloaded by backend/scripts/build_seismic_data.py (BMTPC map, IS 1893);
+# the extracted JSON in backend/data/seismic/ is committed
+backend/data/seismic/sources/
+
 # Throwaway debug pages for rendering components outside the app
 viteapp/debug-*.html
 viteapp/src/__debug_*

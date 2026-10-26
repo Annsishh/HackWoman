@@ -1,276 +1,374 @@
-import { useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import {
-  Play, Pause, RefreshCw, Activity, Thermometer,
-  Wind, Zap, AlertTriangle, CheckCircle, MapPin,
+  Activity, Thermometer, AlertTriangle, CheckCircle, MapPin, Play, ExternalLink, Loader2, Database,
 } from 'lucide-react';
 import { useBuilding } from '../../context/BuildingContext';
-import type { DistrictData } from '../../data/karnataka_db';
+import {
+  fetchSeismicAnalysis, type SeismicAnalysis, type SeismicReport, type SoilType,
+} from '../../services/api';
+import { fetchClimate, fetchLiveConditions, type ClimateBaseline, type LiveConditions } from '../../services/liveData';
 
-// ── Types ─────────────────────────────────────────────────────────────────────
-type SimStatus = 'ready' | 'running' | 'completed' | 'failed';
+/* IS 1893 (Part 1):2016 Table 4, abridged */
+const SOIL_HELP: Record<SoilType, string> = {
+  I: 'Rock or hard soil — well-graded gravel/sand, or sand/clay with SPT N > 30',
+  II: 'Medium or stiff soil — poorly graded sand or low-compressibility silt/clay, N 10–30',
+  III: 'Soft soil — all soils other than SP with N < 10 (silts and clays of medium/high compressibility)',
+};
+const IMPORTANCE: { value: number; label: string }[] = [
+  { value: 1.0, label: '1.0 — homes and other buildings' },
+  { value: 1.2, label: '1.2 — residential/commercial, > 200 occupants' },
+  { value: 1.5, label: '1.5 — schools, hospitals, lifeline buildings' },
+];
 
-const STATUS_CONFIG: Record<SimStatus, { label: string; color: string; bg: string }> = {
-  ready:     { label: 'READY',     color: '#94a3b8', bg: 'rgba(148,163,184,0.08)' },
-  running:   { label: 'RUNNING',   color: '#06b6d4', bg: 'rgba(6,182,212,0.08)'   },
-  completed: { label: 'COMPLETED', color: '#10b981', bg: 'rgba(16,185,129,0.08)'  },
-  failed:    { label: 'FAILED',    color: '#ef4444', bg: 'rgba(239,68,68,0.08)'   },
+const card: React.CSSProperties = {
+  background: 'rgba(255,255,255,0.02)', border: '1px solid var(--border-subtle)', borderRadius: '12px', padding: '1rem 1.1rem',
+};
+const label: React.CSSProperties = { fontSize: '0.6rem', fontWeight: 700, letterSpacing: '0.1em', color: 'var(--text-tertiary)' };
+const select: React.CSSProperties = {
+  background: 'rgba(255,255,255,0.05)', border: '1px solid var(--border-subtle)', borderRadius: '7px',
+  color: '#f1f5f9', fontSize: '0.75rem', padding: '0.35rem 0.5rem', marginTop: '0.25rem', width: '100%',
 };
 
-// ── Derive simulation descriptions from district data ─────────────────────────
-interface SimSpec {
-  id: string;
-  name: string;
-  color: string;
-  icon: React.ReactNode;
-  description: string;
-  duration: string;
-  metrics: { label: string; value: string; unit: string; risk?: 'low' | 'medium' | 'high' }[];
-  passThreshold: (d: DistrictData, floors: number) => boolean;
-}
-
-function buildSimSpecs(d: DistrictData, floors: number): SimSpec[] {
-  const totalArea = floors * 1200; // sqft per floor estimate
-
-  return [
-    {
-      id: 'seismic',
-      name: 'Seismic Load Analysis',
-      color: '#ef4444',
-      icon: <Activity size={18} />,
-      description: `IS 1893-2016 analysis for ${d.name}. Seismic Zone ${d.seismic.zone} — ${d.seismic.zoneDescription}. Soil class: ${d.seismic.soilType}.`,
-      duration: '~45s',
-      passThreshold: (dist) => dist.seismic.structuralRisk !== 'High',
-      metrics: [
-        { label: 'Seismic Zone',             value: `Zone ${d.seismic.zone}`,                          unit: '',     risk: d.seismic.zone === 'IV' ? 'high' : d.seismic.zone === 'III' ? 'medium' : 'low' },
-        { label: 'Peak Ground Accel.',        value: `${d.seismic.peakGroundAcceleration.toFixed(2)}`,  unit: 'g',     risk: d.seismic.peakGroundAcceleration > 0.24 ? 'high' : d.seismic.peakGroundAcceleration > 0.12 ? 'medium' : 'low' },
-        { label: 'Soil Type',                 value: d.seismic.soilType,                                unit: '',      risk: d.seismic.soilType === 'Soft' ? 'high' : d.seismic.soilType === 'Medium' ? 'medium' : 'low' },
-        { label: 'Design Base Shear',         value: `${(d.seismic.designBaseShear * Math.max(floors, 1)).toFixed(1)}`, unit: 'kN', risk: 'low' },
-        { label: 'Response Spectrum (Sa/g)',  value: `${d.seismic.responseSpectrum.toFixed(2)}`,         unit: '',      risk: d.seismic.responseSpectrum > 2.0 ? 'high' : d.seismic.responseSpectrum > 1.6 ? 'medium' : 'low' },
-        { label: 'Structural Risk',           value: d.seismic.structuralRisk,                           unit: '',      risk: d.seismic.structuralRisk === 'High' ? 'high' : d.seismic.structuralRisk === 'Moderate' ? 'medium' : 'low' },
-      ],
-    },
-    {
-      id: 'thermal',
-      name: 'Thermal Performance',
-      color: '#f59e0b',
-      icon: <Thermometer size={18} />,
-      description: `EnergyPlus thermal model for ${d.name}. Climate: ${d.thermal.climateZone}. Summer peak ${d.thermal.avgSummerTempC}°C, solar radiation ${d.thermal.solarRadiation} W/m².`,
-      duration: '~2m',
-      passThreshold: (dist) => dist.thermal.thermalComfortIndex < 7.5,
-      metrics: [
-        { label: 'Climate Zone',              value: d.thermal.climateZone,                              unit: '',      risk: d.thermal.climateZone === 'Hot-Humid' ? 'high' : d.thermal.climateZone === 'Hot-Dry' ? 'medium' : 'low' },
-        { label: 'Summer Peak Temp',          value: `${d.thermal.avgSummerTempC}`,                      unit: '°C',    risk: d.thermal.avgSummerTempC > 40 ? 'high' : d.thermal.avgSummerTempC > 35 ? 'medium' : 'low' },
-        { label: 'Solar Radiation',           value: `${d.thermal.solarRadiation}`,                      unit: 'W/m²',  risk: d.thermal.solarRadiation > 240 ? 'high' : d.thermal.solarRadiation > 210 ? 'medium' : 'low' },
-        { label: 'Annual Cooling Load',       value: `${(d.thermal.annualCoolingLoadKwh * totalArea / 929).toFixed(0)}`, unit: 'kWh/yr', risk: 'medium' },
-        { label: 'Wall U-Value (recmd)',      value: `${d.thermal.uValueWall.toFixed(2)}`,                unit: 'W/m²K', risk: 'low' },
-        { label: 'Thermal Comfort Index',     value: `${d.thermal.thermalComfortIndex.toFixed(1)} / 10`,  unit: '',      risk: d.thermal.thermalComfortIndex > 7.5 ? 'high' : d.thermal.thermalComfortIndex > 5.5 ? 'medium' : 'low' },
-      ],
-    },
-    {
-      id: 'wind',
-      name: 'Wind Load Study',
-      color: '#06b6d4',
-      icon: <Wind size={18} />,
-      description: `IS 875 Part-3 CFD analysis for ${d.name}. Basic wind speed ${d.wind.basicWindSpeed} km/h, Terrain Category ${d.wind.terrainCategory}. Cyclone risk: ${d.wind.cycloneProbability}.`,
-      duration: '~1m',
-      passThreshold: (dist) => dist.wind.structuralWindIndex < 7.0,
-      metrics: [
-        { label: 'Basic Wind Speed',          value: `${d.wind.basicWindSpeed}`,                         unit: 'km/h',  risk: d.wind.basicWindSpeed > 47 ? 'high' : d.wind.basicWindSpeed > 39 ? 'medium' : 'low' },
-        { label: 'Design Wind Speed',         value: `${d.wind.designWindSpeed}`,                        unit: 'km/h',  risk: d.wind.designWindSpeed > 55 ? 'high' : d.wind.designWindSpeed > 44 ? 'medium' : 'low' },
-        { label: 'Wind Pressure',             value: `${d.wind.windPressure}`,                           unit: 'N/m²',  risk: d.wind.windPressure > 900 ? 'high' : d.wind.windPressure > 600 ? 'medium' : 'low' },
-        { label: 'Terrain Category',          value: `Cat ${d.wind.terrainCategory}`,                    unit: '',      risk: d.wind.terrainCategory <= 2 ? 'medium' : 'low' },
-        { label: 'Cyclone Probability',       value: d.wind.cycloneProbability,                          unit: '',      risk: d.wind.cycloneProbability === 'High' ? 'high' : d.wind.cycloneProbability === 'Moderate' ? 'medium' : 'low' },
-        { label: 'Structural Wind Index',     value: `${d.wind.structuralWindIndex.toFixed(1)} / 10`,    unit: '',      risk: d.wind.structuralWindIndex > 7.0 ? 'high' : d.wind.structuralWindIndex > 4.5 ? 'medium' : 'low' },
-      ],
-    },
-    {
-      id: 'electrical',
-      name: 'Electrical Load Flow',
-      color: '#f97316',
-      icon: <Zap size={18} />,
-      description: `IEEE 37-bus load flow for ${d.name}. Grid reliability ${d.electrical.gridReliabilityPct}%, tariff ₹${d.electrical.avgTariffPerUnit}/kWh, ${d.electrical.renewableMixPct}% renewable mix.`,
-      duration: '~20s',
-      passThreshold: (dist) => dist.electrical.gridReliabilityPct >= 90 && dist.electrical.voltageFluctuationPct <= 10,
-      metrics: [
-        { label: 'Grid Reliability',          value: `${d.electrical.gridReliabilityPct.toFixed(1)}`,   unit: '%',     risk: d.electrical.gridReliabilityPct < 88 ? 'high' : d.electrical.gridReliabilityPct < 93 ? 'medium' : 'low' },
-        { label: 'Avg Tariff',                value: `₹${d.electrical.avgTariffPerUnit.toFixed(1)}`,    unit: '/kWh',  risk: 'low' },
-        { label: 'Connected Load',            value: `${(d.electrical.connectedLoadPerFloor * Math.max(floors, 1)).toFixed(1)}`, unit: 'kW', risk: 'medium' },
-        { label: 'Voltage Fluctuation',       value: `±${d.electrical.voltageFluctuationPct.toFixed(1)}`, unit: '%',  risk: d.electrical.voltageFluctuationPct > 12 ? 'high' : d.electrical.voltageFluctuationPct > 7 ? 'medium' : 'low' },
-        { label: 'Renewable Mix',             value: `${d.electrical.renewableMixPct}`,                  unit: '%',     risk: d.electrical.renewableMixPct < 35 ? 'medium' : 'low' },
-        { label: 'Recommended Generator',    value: `${d.electrical.recommendedGeneratorKva}`,           unit: 'kVA',   risk: 'low' },
-      ],
-    },
-  ];
-}
-
-// ── Risk badge ────────────────────────────────────────────────────────────────
-function Risk({ level }: { level?: 'low' | 'medium' | 'high' }) {
-  const cfg = { low: { color: '#10b981', label: '●' }, medium: { color: '#f59e0b', label: '●' }, high: { color: '#ef4444', label: '●' } };
-  const c = cfg[level ?? 'low'];
-  return <span style={{ color: c.color, fontSize: '0.7rem', marginRight: '4px' }} title={level}>{c.label}</span>;
-}
-
-// ── Main component ────────────────────────────────────────────────────────────
 export function SimulationsPage() {
   const { state } = useBuilding();
-  const district = state.district;
   const floors = state.floors.length;
 
-  const [statuses, setStatuses] = useState<Record<string, { status: SimStatus; progress?: number; result?: 'PASS' | 'FAIL'; lastRun: string }>>({
-    seismic:    { status: 'ready',     lastRun: '—' },
-    thermal:    { status: 'ready',     lastRun: '—' },
-    wind:       { status: 'ready',     lastRun: '—' },
-    electrical: { status: 'ready',     lastRun: '—' },
-  });
+  const [soil, setSoil] = useState<SoilType | 'auto'>('auto');
+  const [frame, setFrame] = useState<'OMRF' | 'SMRF'>('SMRF');
+  const [importance, setImportance] = useState(1.0);
+  const [infill, setInfill] = useState(true);
+  const [report, setReport] = useState<SeismicReport | null>(null);
+  const [running, setRunning] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  const simSpecs = buildSimSpecs(district, floors);
+  const run = useCallback(async () => {
+    setRunning(true); setError(null);
+    try {
+      setReport(await fetchSeismicAnalysis({ soil, frame, importance, infill }));
+    } catch (err) {
+      setError(err instanceof Error ? err.message : String(err));
+    } finally { setRunning(false); }
+  }, [soil, frame, importance, infill]);
 
-  const handleRun = (sim: SimSpec) => {
-    const { id, passThreshold } = sim;
-    setStatuses(prev => ({ ...prev, [id]: { status: 'running', progress: 0, lastRun: 'Running…' } }));
+  // Run once on open, and again whenever the inputs change
+  useEffect(() => { run(); }, [run]);
 
-    let pct = 0;
-    const iv = setInterval(() => {
-      pct += Math.random() * 18 + 4;
-      if (pct >= 100) {
-        clearInterval(iv);
-        const pass = passThreshold(district, floors);
-        setStatuses(prev => ({ ...prev, [id]: { status: 'completed', progress: 100, lastRun: 'Just now', result: pass ? 'PASS' : 'FAIL' } }));
-      } else {
-        setStatuses(prev => ({ ...prev, [id]: { ...prev[id], progress: Math.round(pct) } }));
-      }
-    }, 350);
-  };
-
-  const handleReset = (id: string) => {
-    setStatuses(prev => ({ ...prev, [id]: { status: 'ready', lastRun: '—' } }));
-  };
-
-  const runAll = () => simSpecs.forEach(s => { if (statuses[s.id].status !== 'running') handleRun(s); });
+  const zone = report?.zone.zone ?? null;
+  const analysisError = report?.analysis.error ?? null;
+  const analysis = report && !analysisError ? report.analysis as SeismicAnalysis : null;
 
   return (
     <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden', background: 'var(--bg-primary)' }}>
-
       {/* Header */}
-      <div style={{ padding: '1.25rem 2rem', borderBottom: '1px solid var(--border-subtle)' }}>
-        <div style={{ fontSize: '0.65rem', letterSpacing: '0.12em', color: 'var(--text-tertiary)', marginBottom: '0.2rem' }}>ENGINEERING ANALYSIS</div>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.75rem' }}>
-          <div>
-            <h2 style={{ margin: 0, fontSize: '1.3rem', fontWeight: 700 }}>Simulations</h2>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', marginTop: '0.2rem', fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
-              <MapPin size={12} color="#06b6d4" />
-              <span style={{ color: '#06b6d4', fontWeight: 600 }}>{district.name}</span>
-              <span style={{ color: 'var(--text-tertiary)' }}>·</span>
-              <span>{district.region}</span>
-              <span style={{ color: 'var(--text-tertiary)' }}>·</span>
-              <span>{floors} floor{floors !== 1 ? 's' : ''}</span>
+      <div style={{ padding: '1.1rem 2rem', borderBottom: '1px solid var(--border-subtle)' }}>
+        <div style={{ fontSize: '0.65rem', letterSpacing: '0.12em', color: 'var(--text-tertiary)' }}>ENGINEERING ANALYSIS · REAL DATA</div>
+        <h2 style={{ margin: '0.15rem 0 0', fontSize: '1.3rem', fontWeight: 700 }}>Simulations</h2>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', marginTop: '0.25rem', fontSize: '0.75rem', color: 'var(--text-secondary)', flexWrap: 'wrap' }}>
+          <MapPin size={12} color="#06b6d4" />
+          <span style={{ color: '#06b6d4', fontWeight: 600 }}>{report?.site.label ?? state.district.name}</span>
+          {report && <span style={{ color: 'var(--text-tertiary)' }}>· {report.site.lat.toFixed(4)}°N, {report.site.lon.toFixed(4)}°E ({report.site.source})</span>}
+          <span style={{ color: 'var(--text-tertiary)' }}>· {floors} floor{floors !== 1 ? 's' : ''}</span>
+        </div>
+      </div>
+
+      <div style={{ flex: 1, overflowY: 'auto', padding: '1.25rem 2rem', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+        {/* ── Seismic analysis ── */}
+        <div style={card}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', marginBottom: '0.8rem' }}>
+            <div style={{ width: 38, height: 38, borderRadius: 10, background: '#ef444418', border: '1px solid #ef444440', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#ef4444' }}>
+              <Activity size={18} />
             </div>
+            <div style={{ flex: 1 }}>
+              <div style={{ fontSize: '0.95rem', fontWeight: 700 }}>Seismic Analysis — IS 1893 (Part 1):2016</div>
+              <div style={{ fontSize: '0.66rem', color: 'var(--text-tertiary)' }}>
+                Equivalent static method (cl. 7.6) · zone from the BMTPC / BIS zone map · live USGS and SoilGrids data
+              </div>
+            </div>
+            <button onClick={run} disabled={running} style={{
+              display: 'flex', alignItems: 'center', gap: '0.35rem', padding: '0.45rem 0.9rem', borderRadius: 8, fontSize: '0.75rem', fontWeight: 700,
+              background: '#ef444420', border: '1px solid #ef444450', color: '#f87171', cursor: running ? 'wait' : 'pointer',
+            }}>
+              {running ? <Loader2 size={13} style={{ animation: 'spin 1s linear infinite' }} /> : <Play size={13} />}
+              {running ? 'Fetching live data…' : 'Re-run'}
+            </button>
           </div>
-          <button onClick={runAll} style={{
-            background: 'rgba(6,182,212,0.12)', border: '1px solid rgba(6,182,212,0.3)',
-            borderRadius: '8px', padding: '0.45rem 1rem', fontSize: '0.75rem',
-            fontWeight: 600, color: '#06b6d4', cursor: 'pointer', display: 'flex',
-            alignItems: 'center', gap: '0.4rem', transform: 'none',
-          }}>
-            <Play size={13} /> Run All
-          </button>
+
+          {/* Inputs the user decides */}
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(190px, 1fr))', gap: '0.6rem' }}>
+            <label style={label}>
+              SOIL TYPE (TABLE 4)
+              <select style={select} value={soil} onChange={e => setSoil(e.target.value as SoilType | 'auto')}>
+                <option value="auto">Auto — from SoilGrids if available</option>
+                <option value="I">Type I — rock / hard</option>
+                <option value="II">Type II — medium / stiff</option>
+                <option value="III">Type III — soft</option>
+              </select>
+            </label>
+            <label style={label}>
+              FRAME (TABLE 9)
+              <select style={select} value={zone && zone !== 'II' ? 'SMRF' : frame} onChange={e => setFrame(e.target.value as 'OMRF' | 'SMRF')}>
+                <option value="SMRF">SMRF — special, ductile (R = 5)</option>
+                <option value="OMRF" disabled={!!zone && zone !== 'II'}>OMRF — ordinary (R = 3){zone && zone !== 'II' ? ' — not allowed in Zone ' + zone : ''}</option>
+              </select>
+            </label>
+            <label style={label}>
+              IMPORTANCE (TABLE 8)
+              <select style={select} value={importance} onChange={e => setImportance(parseFloat(e.target.value))}>
+                {IMPORTANCE.map(i => <option key={i.value} value={i.value}>{i.label}</option>)}
+              </select>
+            </label>
+            <label style={label}>
+              WALLS
+              <select style={select} value={infill ? 'infill' : 'bare'} onChange={e => setInfill(e.target.value === 'infill')}>
+                <option value="infill">RC frame with brick infill</option>
+                <option value="bare">Bare RC frame</option>
+              </select>
+            </label>
+          </div>
+
+          {error && <Banner tone="error">{error}</Banner>}
+          {!report && running && <div style={{ fontSize: '0.75rem', color: 'var(--text-tertiary)', marginTop: '0.8rem' }}>Querying USGS and SoilGrids…</div>}
+
+          {report && (
+            <>
+              {/* Zone + soil */}
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '0.6rem', marginTop: '0.9rem' }}>
+                <Panel title="SEISMIC ZONE" tone={zone === 'II' ? 'ok' : 'warn'}>
+                  <div style={{ fontSize: '1.4rem', fontWeight: 800 }}>
+                    {zone ? `Zone ${zone}` : 'Unknown'}{report.zone.Z !== null && <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', fontWeight: 600 }}> · Z = {report.zone.Z}</span>}
+                  </div>
+                  <ul style={{ margin: '0.35rem 0 0', paddingLeft: '1rem', fontSize: '0.66rem', color: 'var(--text-secondary)', lineHeight: 1.5 }}>
+                    {report.zone.basis.map((b, i) => <li key={i}>{b}</li>)}
+                  </ul>
+                </Panel>
+                <Panel title="SOIL" tone={report.soil_used ? 'ok' : 'warn'}>
+                  <div style={{ fontSize: '1rem', fontWeight: 800 }}>
+                    {report.soil_used ? `Type ${report.soil_used}` : 'Not known — choose above'}
+                    <span style={{ fontSize: '0.7rem', color: 'var(--text-tertiary)', fontWeight: 600 }}> · {report.soil_source}</span>
+                  </div>
+                  {report.soil_used && <div style={{ fontSize: '0.66rem', color: 'var(--text-secondary)', marginTop: '0.2rem' }}>{SOIL_HELP[report.soil_used]}</div>}
+                  <div style={{ fontSize: '0.66rem', color: 'var(--text-tertiary)', marginTop: '0.35rem', lineHeight: 1.5 }}>
+                    SoilGrids: {report.soil_texture.reason}
+                  </div>
+                </Panel>
+              </div>
+
+              {analysisError && <Banner tone="warn">{analysisError}</Banner>}
+              {analysis && <AnalysisResult a={analysis} />}
+
+              <QuakeHistory report={report} />
+              <Sources report={report} analysis={analysis} />
+            </>
+          )}
         </div>
 
-        {/* District quick-stats */}
-        <div style={{ display: 'flex', gap: '0.6rem', marginTop: '0.85rem', flexWrap: 'wrap' }}>
-          {[
-            { label: 'Climate', value: district.thermal.climateZone,            color: '#f59e0b' },
-            { label: 'Seismic', value: `Zone ${district.seismic.zone}`,          color: '#ef4444' },
-            { label: 'Wind',    value: `${district.wind.basicWindSpeed} km/h`,   color: '#06b6d4' },
-            { label: 'Grid',    value: `${district.electrical.gridReliabilityPct}% uptime`, color: '#10b981' },
-            { label: 'Tariff',  value: `₹${district.electrical.avgTariffPerUnit}/kWh`, color: '#f97316' },
-          ].map(s => (
-            <div key={s.label} style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.07)', borderRadius: '6px', padding: '0.3rem 0.65rem', fontSize: '0.68rem' }}>
-              <span style={{ color: 'var(--text-tertiary)' }}>{s.label}: </span>
-              <span style={{ color: s.color, fontWeight: 700 }}>{s.value}</span>
+        <SiteClimate />
+      </div>
+      <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
+    </div>
+  );
+}
+
+function AnalysisResult({ a }: { a: SeismicAnalysis }) {
+  const gov = a.directions.find(d => d.direction === a.governing) ?? a.directions[0];
+  const maxQ = Math.max(...gov.forces.map(f => f.V_kN), 1);
+  return (
+    <>
+      {/* Headline numbers */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: '0.5rem', marginTop: '0.8rem' }}>
+        <Stat label="DESIGN BASE SHEAR VB" value={`${gov.VB_kN}`} unit="kN" sub={`${gov.VB_percent_W} % of W · ${gov.direction}`} accent />
+        <Stat label="SEISMIC WEIGHT W" value={`${a.W_kN}`} unit="kN" sub={`${a.levels.length} levels · cl. 7.4`} />
+        <Stat label="PERIOD Ta" value={`${gov.Ta_s}`} unit="s" sub={gov.Ta_rule.split(':')[0]} />
+        <Stat label="Sa/g" value={`${gov.Sa_g}`} unit="" sub={`Soil Type ${a.soil} · cl. 6.4.2(a)`} />
+        <Stat label="Ah" value={`${gov.Ah}`} unit="" sub={gov.min_governs ? `Table 7 minimum ${gov.Ah_min} governs` : `≥ minimum ${gov.Ah_min}`} />
+        <Stat label="HEIGHT h" value={`${a.height_m}`} unit="m" sub={`${a.storey_height_m} m storeys`} />
+      </div>
+
+      {/* Floor forces */}
+      <div style={{ marginTop: '0.9rem' }}>
+        <div style={label}>LATERAL FORCES BY FLOOR — {gov.direction.toUpperCase()} (Qi = VB·Wi·hi² / ΣWj·hj², cl. 7.6.3)</div>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.3rem', marginTop: '0.4rem' }}>
+          {[...gov.forces].reverse().map(f => {
+            const lvl = a.levels[f.level - 1];
+            return (
+              <div key={f.level} style={{ display: 'grid', gridTemplateColumns: '8rem 1fr 7rem 7rem 7rem', gap: '0.5rem', alignItems: 'center', fontSize: '0.7rem' }}>
+                <span style={{ color: 'var(--text-secondary)', whiteSpace: 'nowrap' }}>Level {f.level} · {lvl.h_m} m</span>
+                <div style={{ height: 8, background: 'rgba(255,255,255,0.05)', borderRadius: 4, overflow: 'hidden' }}>
+                  <div style={{ width: `${(f.V_kN / maxQ) * 100}%`, height: '100%', background: 'linear-gradient(90deg,#ef4444,#f59e0b)' }} />
+                </div>
+                <span>W {lvl.W_kN} kN</span>
+                <span>Q {f.Q_kN} kN</span>
+                <span style={{ fontWeight: 700 }}>V {f.V_kN} kN</span>
+              </div>
+            );
+          })}
+        </div>
+        <div style={{ fontSize: '0.64rem', color: 'var(--text-tertiary)', marginTop: '0.35rem' }}>
+          Overturning moment at base {gov.overturning_kNm} kN·m. Other direction: VB {a.directions.find(d => d !== gov)?.VB_kN} kN (Ta {a.directions.find(d => d !== gov)?.Ta_s} s).
+        </div>
+      </div>
+
+      {/* Code checks */}
+      <div style={{ marginTop: '0.9rem' }}>
+        <div style={label}>CODE CHECKS</div>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.3rem', marginTop: '0.4rem' }}>
+          {a.checks.map((c, i) => (
+            <div key={i} style={{ display: 'flex', gap: '0.45rem', fontSize: '0.7rem', lineHeight: 1.45, color: c.ok ? 'var(--text-secondary)' : '#fbbf24' }}>
+              {c.ok ? <CheckCircle size={14} color="#10b981" style={{ flexShrink: 0, marginTop: 1 }} /> : <AlertTriangle size={14} color="#f59e0b" style={{ flexShrink: 0, marginTop: 1 }} />}
+              <span><b>{c.rule}:</b> {c.detail}</span>
             </div>
           ))}
         </div>
       </div>
+    </>
+  );
+}
 
-      {/* Sim cards */}
-      <div style={{ flex: 1, overflowY: 'auto', padding: '1.25rem 2rem', display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(400px, 1fr))', gap: '1rem', alignContent: 'start' }}>
-        {simSpecs.map(sim => {
-          const st = statuses[sim.id];
-          const statusCfg = STATUS_CONFIG[st.status];
-          return (
-            <div key={sim.id} style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid var(--border-subtle)', borderRadius: '12px', padding: '1.1rem', display: 'flex', flexDirection: 'column', gap: '0.75rem', transition: 'border-color 0.2s' }}
-              onMouseEnter={e => (e.currentTarget as HTMLDivElement).style.borderColor = `${sim.color}40`}
-              onMouseLeave={e => (e.currentTarget as HTMLDivElement).style.borderColor = 'var(--border-subtle)'}
-            >
-              {/* Top row */}
-              <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '0.5rem' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
-                  <div style={{ width: '40px', height: '40px', borderRadius: '10px', background: `${sim.color}15`, border: `1px solid ${sim.color}30`, display: 'flex', alignItems: 'center', justifyContent: 'center', color: sim.color, flexShrink: 0 }}>
-                    {sim.icon}
-                  </div>
-                  <div>
-                    <div style={{ fontSize: '0.85rem', fontWeight: 700 }}>{sim.name}</div>
-                    <div style={{ fontSize: '0.62rem', color: 'var(--text-tertiary)', marginTop: '1px' }}>Duration: {sim.duration} · Last: {st.lastRun}</div>
-                  </div>
-                </div>
-                <span style={{ background: statusCfg.bg, color: statusCfg.color, border: `1px solid ${statusCfg.color}30`, borderRadius: '20px', padding: '0.15rem 0.55rem', fontSize: '0.58rem', fontWeight: 700, letterSpacing: '0.07em', flexShrink: 0 }}>
-                  {statusCfg.label}
-                </span>
+function QuakeHistory({ report }: { report: SeismicReport }) {
+  const q = report.earthquakes;
+  return (
+    <div style={{ marginTop: '0.9rem' }}>
+      <div style={label}>RECORDED EARTHQUAKES WITHIN {q.radius_km} KM</div>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '0.6rem', marginTop: '0.4rem' }}>
+        <Panel title={`USGS CATALOGUE · M ≥ 3 SINCE 1900 · ${q.usgs.length} EVENT${q.usgs.length === 1 ? '' : 'S'}`}>
+          {q.usgs_error ? <div style={{ fontSize: '0.68rem', color: '#f87171' }}>{q.usgs_error}</div>
+            : q.usgs.length === 0 ? <div style={{ fontSize: '0.68rem', color: 'var(--text-secondary)' }}>No M ≥ 3 events recorded in this radius — USGS coverage of South India before the 1970s is sparse.</div>
+            : q.usgs.slice(0, 8).map((e, i) => (
+              <a key={i} href={e.url} target="_blank" rel="noreferrer" style={{ display: 'flex', gap: '0.4rem', fontSize: '0.68rem', color: 'var(--text-secondary)', textDecoration: 'none', padding: '0.1rem 0' }}>
+                <b style={{ color: e.magnitude >= 5 ? '#ef4444' : '#f59e0b', width: '4.2rem' }}>M{e.magnitude.toFixed(1)} {e.mag_type}</b>
+                <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{e.place}</span>
+                <span style={{ color: 'var(--text-tertiary)' }}>{new Date(e.time).getFullYear()} · {e.distance_km} km</span>
+              </a>
+            ))}
+        </Panel>
+        <Panel title="IMD EPICENTRES M ≥ 5 (ON BMTPC MAP)">
+          {q.map_events.length === 0 ? <div style={{ fontSize: '0.68rem', color: 'var(--text-secondary)' }}>None within {q.radius_km} km.</div>
+            : q.map_events.map((e, i) => (
+              <div key={i} style={{ display: 'flex', gap: '0.4rem', fontSize: '0.68rem', color: 'var(--text-secondary)', padding: '0.1rem 0' }}>
+                <b style={{ color: e.magnitude >= 6 ? '#ef4444' : '#f59e0b', width: '3.2rem' }}>M{e.magnitude.toFixed(1)}</b>
+                <span style={{ flex: 1 }}>{e.year} · {e.lat.toFixed(2)}°N, {e.lon.toFixed(2)}°E</span>
+                <span style={{ color: 'var(--text-tertiary)' }}>{e.distance_km} km</span>
               </div>
-
-              {/* Description */}
-              <p style={{ margin: 0, fontSize: '0.72rem', color: 'var(--text-secondary)', lineHeight: 1.5 }}>{sim.description}</p>
-
-              {/* Metrics grid — shown after completion */}
-              {st.status === 'completed' && (
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.35rem' }}>
-                  {sim.metrics.map(m => (
-                    <div key={m.label} style={{ background: 'rgba(255,255,255,0.03)', borderRadius: '6px', padding: '0.4rem 0.55rem', border: '1px solid rgba(255,255,255,0.05)' }}>
-                      <div style={{ fontSize: '0.58rem', color: 'var(--text-tertiary)', marginBottom: '2px' }}>{m.label}</div>
-                      <div style={{ fontSize: '0.78rem', fontWeight: 700, color: '#f1f5f9', display: 'flex', alignItems: 'center' }}>
-                        <Risk level={m.risk} />
-                        {m.value}{m.unit && <span style={{ fontSize: '0.6rem', color: 'var(--text-tertiary)', marginLeft: '2px' }}>{m.unit}</span>}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-
-              {/* Progress bar */}
-              {st.status === 'running' && st.progress !== undefined && (
-                <div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.63rem', color: 'var(--text-tertiary)', marginBottom: '0.3rem' }}>
-                    <span>Analysing {district.name}…</span>
-                    <span>{st.progress}%</span>
-                  </div>
-                  <div style={{ height: '4px', background: 'rgba(255,255,255,0.06)', borderRadius: '2px', overflow: 'hidden' }}>
-                    <div style={{ height: '100%', width: `${st.progress}%`, background: `linear-gradient(90deg, ${sim.color}, ${sim.color}80)`, borderRadius: '2px', transition: 'width 0.3s ease' }} />
-                  </div>
-                </div>
-              )}
-
-              {/* Result badge */}
-              {st.status === 'completed' && st.result && (
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.72rem', fontWeight: 700, color: st.result === 'PASS' ? '#10b981' : '#ef4444' }}>
-                  {st.result === 'PASS' ? <CheckCircle size={14} /> : <AlertTriangle size={14} />}
-                  {st.result === 'PASS' ? `All checks passed for ${district.name}` : `Review required — ${district.name} exceeds threshold`}
-                </div>
-              )}
-
-              {/* Actions */}
-              <div style={{ display: 'flex', gap: '0.4rem' }}>
-                <button onClick={() => handleRun(sim)} disabled={st.status === 'running'} style={{ flex: 1, background: st.status === 'running' ? 'rgba(255,255,255,0.04)' : `${sim.color}20`, border: `1px solid ${st.status === 'running' ? 'var(--border-subtle)' : `${sim.color}40`}`, borderRadius: '7px', padding: '0.45rem', fontSize: '0.73rem', fontWeight: 600, color: st.status === 'running' ? 'var(--text-tertiary)' : sim.color, cursor: st.status === 'running' ? 'wait' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.35rem', transform: 'none' }}>
-                  {st.status === 'running' ? <><Pause size={12} /> Running</> : <><Play size={12} /> Run</>}
-                </button>
-                <button onClick={() => handleReset(sim.id)} style={{ width: '36px', background: 'rgba(255,255,255,0.04)', border: '1px solid var(--border-subtle)', borderRadius: '7px', color: 'var(--text-tertiary)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', transform: 'none' }}>
-                  <RefreshCw size={12} />
-                </button>
-              </div>
-            </div>
-          );
-        })}
+            ))}
+        </Panel>
       </div>
     </div>
   );
+}
+
+function Sources({ report, analysis }: { report: SeismicReport; analysis: SeismicAnalysis | null }) {
+  const s = report.sources;
+  return (
+    <details style={{ marginTop: '0.9rem' }}>
+      <summary style={{ ...label, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+        <Database size={12} /> EVERY INPUT AND ITS SOURCE
+      </summary>
+      {analysis && (
+        <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.68rem', marginTop: '0.5rem' }}>
+          <tbody>
+            {analysis.inputs.map(i => (
+              <tr key={i.name} style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+                <td style={{ padding: '0.3rem 0.4rem', color: 'var(--text-secondary)' }}>{i.name}</td>
+                <td style={{ padding: '0.3rem 0.4rem', fontWeight: 700 }}>{String(i.value)}</td>
+                <td style={{ padding: '0.3rem 0.4rem', color: 'var(--text-tertiary)' }}>{i.source}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      )}
+      {analysis && (
+        <div style={{ fontSize: '0.66rem', color: '#fbbf24', marginTop: '0.5rem', lineHeight: 1.6 }}>
+          Engineering assumptions (not code values): {analysis.assumptions.join(' · ')}
+        </div>
+      )}
+      <ul style={{ fontSize: '0.66rem', color: 'var(--text-secondary)', lineHeight: 1.7, paddingLeft: '1rem', marginTop: '0.5rem' }}>
+        <li>{s.zone_map.title} — {s.zone_map.publisher}. Basis: {s.zone_map.basis}. <SourceLink href={s.zone_map.url} /> (retrieved {s.zone_map.retrieved})</li>
+        <li>{s.annex_e.title} — {s.annex_e.publisher}, PDF page {s.annex_e.pdf_page}. <SourceLink href={s.annex_e.url} /></li>
+        <li>{s.usgs}</li>
+        <li>{s.soilgrids}</li>
+        <li>Code text: {s.code}. The 2025 revision of IS 1893 was withdrawn in March 2026, so the 2016 edition applies.</li>
+      </ul>
+    </details>
+  );
+}
+
+/* ── Measured site climate (Open-Meteo forecast + ERA5 archive) ── */
+function SiteClimate() {
+  const { state } = useBuilding();
+  const district = state.district;
+  const lat = state.location?.lat;
+  const lng = state.location?.lng;
+  const [live, setLive] = useState<LiveConditions | null>(null);
+  const [climate, setClimate] = useState<ClimateBaseline | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const ctrl = new AbortController();
+    const site = lat !== undefined && lng !== undefined ? { lat, lng } : null;
+    fetchLiveConditions({ id: district.id, name: district.name }, ctrl.signal, site)
+      .then(l => { setLive(l); return fetchClimate(l.coords[0], l.coords[1], ctrl.signal); })
+      .then(setClimate)
+      .catch(err => { if (!ctrl.signal.aborted) setError(String(err)); });
+    return () => ctrl.abort();
+  }, [district.id, district.name, lat, lng]);
+
+  const w = live?.weather;
+  return (
+    <div style={card}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', marginBottom: '0.7rem' }}>
+        <div style={{ width: 38, height: 38, borderRadius: 10, background: '#f59e0b18', border: '1px solid #f59e0b40', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#f59e0b' }}>
+          <Thermometer size={18} />
+        </div>
+        <div>
+          <div style={{ fontSize: '0.95rem', fontWeight: 700 }}>Site Climate — measured</div>
+          <div style={{ fontSize: '0.66rem', color: 'var(--text-tertiary)' }}>Open-Meteo live weather and its ERA5 reanalysis archive (ECMWF) for this site</div>
+        </div>
+      </div>
+      {error && <Banner tone="error">{error}</Banner>}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: '0.5rem' }}>
+        <Stat label="TEMPERATURE NOW" value={w ? `${w.temperatureC.toFixed(1)}` : '…'} unit="°C" sub={w ? `${w.humidityPct} % RH` : ''} />
+        <Stat label="WIND NOW" value={w ? `${Math.round(w.windKmh)}` : '…'} unit="km/h" sub={w ? `gust ${Math.round(w.gustKmh)} km/h` : ''} />
+        <Stat label="SOLAR NOW" value={w ? `${Math.round(w.solarWm2)}` : '…'} unit="W/m²" sub="shortwave radiation" />
+        <Stat label="HOT DAY (95TH PCT)" value={climate ? `${climate.hotDayC}` : '…'} unit="°C" sub={climate ? `daily max, ${climate.from} → ${climate.to}` : 'loading 3-year archive'} />
+        <Stat label="STRONGEST GUST" value={climate ? `${climate.recordGustKmh}` : '…'} unit="km/h" sub={climate ? `${climate.years}-year record` : ''} />
+        <Stat label="PEAK SOLAR (AVG)" value={climate ? `${climate.avgPeakSolarWm2}` : '…'} unit="W/m²" sub="daily peak, last 12 months" />
+      </div>
+      <div style={{ fontSize: '0.64rem', color: 'var(--text-tertiary)', marginTop: '0.6rem', lineHeight: 1.6 }}>
+        These are measured/reanalysed values, not design values. A wind-load design needs the IS 875 (Part 3) basic wind speed for the
+        site, and electrical load flow needs utility data — neither has an authentic public live source, so they're not simulated here.
+      </div>
+    </div>
+  );
+}
+
+/* ── Small pieces ── */
+function Panel({ title, tone, children }: { title: string; tone?: 'ok' | 'warn'; children: React.ReactNode }) {
+  const c = tone === 'warn' ? '#f59e0b' : tone === 'ok' ? '#10b981' : 'var(--border-subtle)';
+  return (
+    <div style={{ border: '1px solid var(--border-subtle)', borderLeft: `3px solid ${c}`, borderRadius: 8, padding: '0.6rem 0.75rem', background: 'rgba(255,255,255,0.02)' }}>
+      <div style={{ ...label, marginBottom: '0.3rem' }}>{title}</div>
+      {children}
+    </div>
+  );
+}
+
+function Stat({ label: l, value, unit, sub, accent }: { label: string; value: string; unit: string; sub?: string; accent?: boolean }) {
+  return (
+    <div style={{ background: accent ? 'rgba(239,68,68,0.08)' : 'rgba(255,255,255,0.03)', border: `1px solid ${accent ? 'rgba(239,68,68,0.35)' : 'rgba(255,255,255,0.06)'}`, borderRadius: 8, padding: '0.5rem 0.6rem' }}>
+      <div style={label}>{l}</div>
+      <div style={{ fontSize: '1.15rem', fontWeight: 800, color: '#f1f5f9', marginTop: '0.15rem' }}>
+        {value}<span style={{ fontSize: '0.65rem', color: 'var(--text-tertiary)', marginLeft: 3 }}>{unit}</span>
+      </div>
+      {sub && <div style={{ fontSize: '0.6rem', color: 'var(--text-tertiary)', marginTop: '0.1rem' }}>{sub}</div>}
+    </div>
+  );
+}
+
+function Banner({ tone, children }: { tone: 'error' | 'warn'; children: React.ReactNode }) {
+  const c = tone === 'error' ? '#f87171' : '#fbbf24';
+  return <div style={{ marginTop: '0.7rem', fontSize: '0.72rem', color: c, background: `${c}14`, border: `1px solid ${c}40`, borderRadius: 8, padding: '0.5rem 0.65rem' }}>{children}</div>;
+}
+
+function SourceLink({ href }: { href: string }) {
+  return <a href={href} target="_blank" rel="noreferrer" style={{ color: '#06b6d4', display: 'inline-flex', alignItems: 'center', gap: 2 }}>source <ExternalLink size={10} /></a>;
 }
