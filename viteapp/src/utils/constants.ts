@@ -35,6 +35,7 @@ export const WELCOME_MESSAGE =
   "• \"Show status\"";
 
 export const QUICK_ACTIONS = [
+  'Use my current location',
   'Add a floor',
   'Add a 160 sqft bedroom to floor 1',
   'Suggest improvements',

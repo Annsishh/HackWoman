@@ -1,5 +1,6 @@
 """
-Trains a GradientBoostingClassifier to output a structural-risk probability,
+Trains a GradientBoostingRegressor on the continuous structural-risk score (0-1)
+— not the at_risk yes/no label, which made predictions collapse to 0% or 100% —
 used to ADD an advisory risk score alongside (not replacing) the
 deterministic overhang check in backend/services/structural_inspector.py.
 
@@ -13,8 +14,8 @@ from datetime import datetime, timezone
 
 import joblib
 import pandas as pd
-from sklearn.ensemble import GradientBoostingClassifier
-from sklearn.metrics import accuracy_score, f1_score, roc_auc_score
+from sklearn.ensemble import GradientBoostingRegressor
+from sklearn.metrics import mean_absolute_error, r2_score
 from sklearn.model_selection import train_test_split
 
 from features import FEATURE_NAMES_RISK
@@ -26,23 +27,19 @@ def main(data_path: str, out_dir: str):
     df = pd.read_csv(data_path)
     feature_cols = [f"risk__{name}" for name in FEATURE_NAMES_RISK]
     X = df[feature_cols]
-    y = df["at_risk"]
+    y = df["risk_score"]
 
-    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42, stratify=y)
+    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
 
-    model = GradientBoostingClassifier(n_estimators=200, max_depth=3, learning_rate=0.05, random_state=42)
+    model = GradientBoostingRegressor(n_estimators=200, max_depth=3, learning_rate=0.05, random_state=42)
     model.fit(X_train, y_train)
 
     preds = model.predict(X_test)
-    probs = model.predict_proba(X_test)[:, 1]
+    mae = mean_absolute_error(y_test, preds)
+    r2 = r2_score(y_test, preds)
 
-    acc = accuracy_score(y_test, preds)
-    f1 = f1_score(y_test, preds)
-    auc = roc_auc_score(y_test, probs)
-
-    print(f"Accuracy: {acc:.3f}")
-    print(f"F1:       {f1:.3f}")
-    print(f"AUC:      {auc:.3f}")
+    print(f"MAE: {mae:.4f}")
+    print(f"R2:  {r2:.3f}")
 
     importances = sorted(zip(FEATURE_NAMES_RISK, model.feature_importances_), key=lambda t: -t[1])
     print("\nTop features:")
@@ -56,9 +53,9 @@ def main(data_path: str, out_dir: str):
     meta = {
         "trained_at": datetime.now(timezone.utc).isoformat(),
         "n_samples": len(df),
-        "accuracy": acc,
-        "f1": f1,
-        "auc": auc,
+        "target": "risk_score (continuous 0-1)",
+        "mae": mae,
+        "r2": r2,
         "feature_names": FEATURE_NAMES_RISK,
         "top_features": [{"name": n, "importance": float(i)} for n, i in importances],
     }

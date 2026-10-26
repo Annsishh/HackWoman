@@ -1,6 +1,6 @@
-# 🌌 ARCHI-MIND AI — Building Intelligence Planner
+# 🌌 निर्माण AI — Building Intelligence Planner
 
-Archi-Mind AI is a state-of-the-art interactive building planner application designed to assist structural designers, architects, and civil engineers. It combines a natural language chat interface powered by a **Model Context Protocol (MCP)** orchestration pattern, a real-time **2.5D CSS 3D Building Visualizer**, and detailed **geographical engineering simulations**.
+निर्माण AI is a state-of-the-art interactive building planner application designed to assist structural designers, architects, and civil engineers. It combines a natural language chat interface powered by a **Model Context Protocol (MCP)** orchestration pattern, a real-time **2.5D CSS 3D Building Visualizer**, and detailed **geographical engineering simulations**.
 
 ---
 

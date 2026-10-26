@@ -1,13 +1,16 @@
 """
 Materials Cost Estimator — MCP Tool: estimate_materials_cost
 
-Calculates granular material costs for a proposed action. Tries the trained
-regression model in /model first (region/seismic/soil-aware); if it isn't
-available (not trained yet, or scikit-learn missing) falls back to the
-original hardcoded formula below so the app never breaks.
+Calculates granular material costs for a proposed action, in order of preference:
+  1. KPWD Schedule of Rates bill of quantities — the cost of the building after
+     the action minus the cost before it (services/boq_estimator.py), when the
+     orchestrator can preview the action's result.
+  2. The trained regression model in /model (region/seismic/soil-aware).
+  3. The original hardcoded formula below, so the app never breaks.
 """
 import logging
 from models.building import BuildingState, MaterialsCostBreakdown
+from services.boq_estimator import cost_buckets, estimate_boq
 from services.ml_loader import predict_cost
 
 logger = logging.getLogger(__name__)
@@ -26,14 +29,18 @@ def estimate_materials_cost(
     action: str,
     params: dict,
     current_state: BuildingState,
+    preview_state: BuildingState | None = None,
 ) -> tuple[MaterialsCostBreakdown, bool]:
     """
     MCP Tool: estimate_materials_cost
-    Input:  { action, params, buildingState }
+    Input:  { action, params, buildingState, previewState? }
     Output: (MaterialsCostBreakdown, within_budget: bool)
     """
     if action == "set_budget":
         return MaterialsCostBreakdown(concrete=0, steel=0, glass=0, total=0), True
+
+    if preview_state is not None:
+        return _estimate_with_boq(current_state, preview_state)
 
     ml_result = _estimate_with_model(action, params, current_state)
     if ml_result is not None:
@@ -41,6 +48,22 @@ def estimate_materials_cost(
 
     logger.info("materials cost: ML model unavailable, using fallback formula")
     return _estimate_with_formula(action, params, current_state)
+
+
+def _estimate_with_boq(
+    current_state: BuildingState,
+    preview_state: BuildingState,
+) -> tuple[MaterialsCostBreakdown, bool]:
+    """Cost of an action = SR bill of quantities after it − before it. Removals cost nothing here."""
+    before = cost_buckets(estimate_boq(current_state))
+    after = cost_buckets(estimate_boq(preview_state))
+    total = max(0, sum(after) - sum(before))
+    steel = min(total, max(0, after[1] - before[1]))
+    glass = min(total - steel, max(0, after[2] - before[2]))
+    concrete = total - steel - glass  # keeps the buckets summing to the total
+    logger.info("materials cost from KPWD SR bill of quantities: %d", total)
+    within_budget = total <= current_state.budget.remaining
+    return MaterialsCostBreakdown(concrete=concrete, steel=steel, glass=glass, total=total, source="kpwd_sr"), within_budget
 
 
 def _estimate_with_model(
@@ -72,7 +95,7 @@ def _estimate_with_model(
     glass = total - concrete - steel  # remainder keeps the breakdown exact
 
     within_budget = total <= current_state.budget.remaining
-    return MaterialsCostBreakdown(concrete=concrete, steel=steel, glass=glass, total=total), within_budget
+    return MaterialsCostBreakdown(concrete=concrete, steel=steel, glass=glass, total=total, source="ml_model"), within_budget
 
 
 def _estimate_with_formula(

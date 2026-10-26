@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useEffect, useReducer, type ReactNode } from 'react';
 import { fetchBuildingState, onServerState } from '../services/api';
-import { getDefaultDistrict, type DistrictData } from '../data/karnataka_db';
+import { getDefaultDistrict, getDistrictById, type DistrictData } from '../data/karnataka_db';
 
 // --- Types ---
 /** Axis-aligned rectangle in feet. */
@@ -81,6 +81,23 @@ export interface Constraints {
   plotAreaSqft: number;
   exteriorWallIn: number;
   interiorWallIn: number;
+  district_id?: string;
+  /** KPWD rates exclude GST; the estimate adds 18% only when this is on */
+  includeGst?: boolean;
+}
+
+/** Where the building is — from GPS, a map click, typed coordinates or a place name. */
+export interface SiteLocation {
+  lat: number;
+  lng: number;
+  address: string;
+  district_id: string;
+  /** District name as the geocoder reported it (differs from ours when we fell back to the nearest) */
+  reported_district: string;
+  in_karnataka: boolean;
+  source: 'gps' | 'search' | 'map' | 'coords';
+  approximated: boolean;
+  offline: boolean;
 }
 
 export interface BuildingState {
@@ -88,6 +105,7 @@ export interface BuildingState {
   budget: Budget;
   constraints: Constraints;
   site: SiteLayout;
+  location?: SiteLocation | null;
   history: Array<{ action: string; timestamp: string; details: string }>;
   district: DistrictData;
   structuralRisk: number | null;
@@ -152,9 +170,16 @@ function normalize(p: BuildingState): BuildingState {
 // --- Reducer ---
 function buildingReducer(state: BuildingState, action: BuildingAction): BuildingState {
   switch (action.type) {
-    case 'SET_STATE':
-      // backend BuildingState payloads don't carry district/structuralRisk — preserve them
-      return { ...normalize(action.payload), district: action.payload.district ?? state.district, structuralRisk: state.structuralRisk };
+    case 'SET_STATE': {
+      // Backend payloads carry only district_id (it changes when the site location is set);
+      // map it to the full district record, and keep the risk score from the response
+      const serverDistrict = getDistrictById(action.payload.constraints?.district_id ?? '');
+      return {
+        ...normalize(action.payload),
+        district: action.payload.district ?? serverDistrict ?? state.district,
+        structuralRisk: state.structuralRisk,
+      };
+    }
     case 'SET_DISTRICT':
       return { ...state, district: action.payload };
     case 'SET_RISK':
@@ -178,8 +203,11 @@ function buildingReducer(state: BuildingState, action: BuildingAction): Building
           plotAreaSqft: state.constraints.plotAreaSqft,
           exteriorWallIn: state.constraints.exteriorWallIn,
           interiorWallIn: state.constraints.interiorWallIn,
+          district_id: state.constraints.district_id,
+          includeGst: state.constraints.includeGst,
         },
         site: { ...state.site, features: [] },
+        location: state.location,
         history: [{ action: 'reset', timestamp: new Date().toISOString(), details: 'Building reset to empty state' }]
       };
     default:

@@ -9,9 +9,10 @@ from datetime import datetime, timezone
 from copy import deepcopy
 
 from models.building import (
-    BuildingState, Floor, Room, HistoryEntry, SiteFeature, Rect, WindowSpec,
+    BuildingState, Floor, Room, HistoryEntry, SiteFeature, SiteLocation, Rect, WindowSpec,
     ROOM_DEFAULT_SQFT, SITE_COST_MULTIPLIERS, default_dims,
 )
+from services.boq_estimator import estimate_boq
 from services.geometry import prune_windows, sync_footprints
 
 
@@ -55,13 +56,13 @@ def _find_room(state: BuildingState, room_id: str) -> tuple[Floor, Room]:
 
 
 def _recalculate_budget(state: BuildingState) -> BuildingState:
-    """Recompute used/remaining from scratch based on current floors/rooms."""
-    cost_per_floor = state.budget.costPerFloor
+    """
+    Recompute used/remaining from scratch: the building is priced as a KPWD
+    Schedule of Rates bill of quantities (services/boq_estimator.py); site
+    features keep their per-sqft rate, since the SR has no item for them.
+    """
     cost_per_sqft = state.budget.costPerSqft
-    used = sum(
-        cost_per_floor + sum((r.area_sqft * cost_per_sqft) for r in f.rooms)
-        for f in state.floors
-    )
+    used = estimate_boq(state).total
     used += sum(
         int(feat.area_sqft * cost_per_sqft * SITE_COST_MULTIPLIERS.get(feat.type, 0.3))
         for feat in state.site.features
@@ -200,6 +201,8 @@ def reset_building(state: BuildingState) -> tuple[BuildingState, HistoryEntry]:
     new_state.constraints.district_id = state.constraints.district_id
     new_state.constraints.exteriorWallIn = state.constraints.exteriorWallIn
     new_state.constraints.interiorWallIn = state.constraints.interiorWallIn
+    new_state.constraints.includeGst = state.constraints.includeGst
+    new_state.location = state.location
     new_state.site = state.site.model_copy(update={"features": []}, deep=True)
     new_state.budget.total = state.budget.total
     new_state.budget.remaining = state.budget.total
@@ -413,6 +416,35 @@ def set_walls(state: BuildingState, exterior_in: float, interior_in: float) -> t
         action="set_walls",
         timestamp=_now(),
         details=f'Wall thickness set to {exterior_in:g}" exterior / {interior_in:g}" interior.',
+    )
+    state.history.append(entry)
+    return state, entry
+
+
+def set_location(state: BuildingState, site: SiteLocation) -> tuple[BuildingState, HistoryEntry]:
+    """Move the building to a resolved site; the district drives risk, simulations and regional cost."""
+    state = deepcopy(state)
+    state.location = site
+    state.constraints.district_id = site.district_id
+    state = _recalculate_budget(state)
+    where = site.address or f"{site.lat:.4f}, {site.lng:.4f}"
+    entry = HistoryEntry(
+        action="set_location",
+        timestamp=_now(),
+        details=f"Site set to {where} (district: {site.district_id}, via {site.source}).",
+    )
+    state.history.append(entry)
+    return state, entry
+
+
+def set_include_gst(state: BuildingState, include: bool) -> tuple[BuildingState, HistoryEntry]:
+    state = deepcopy(state)
+    state.constraints.includeGst = include
+    state = _recalculate_budget(state)
+    entry = HistoryEntry(
+        action="set_gst",
+        timestamp=_now(),
+        details=f"GST {'included in' if include else 'excluded from'} the cost estimate.",
     )
     state.history.append(entry)
     return state, entry

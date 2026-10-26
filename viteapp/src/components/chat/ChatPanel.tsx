@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { Send, Bot, User, Zap, RotateCcw } from 'lucide-react';
 import { useBuilding } from '../../context/BuildingContext';
-import { sendMessage, resetBuilding } from '../../services/api';
+import { sendMessage, resetBuilding, setLocation, getBrowserPosition } from '../../services/api';
 import { QUICK_ACTIONS, WELCOME_MESSAGE } from '../../utils/constants';
 import type { ChatResponse } from '../../services/api';
 
@@ -61,8 +61,7 @@ export function ChatPanel() {
     setInput('');
     setLoading(true);
 
-    try {
-      const res = await sendMessage(text.trim());
+    const show = (res: ChatResponse) => {
       if (res.updatedState) {
         dispatch({ type: 'SET_STATE', payload: res.updatedState });
       }
@@ -70,7 +69,7 @@ export function ChatPanel() {
         dispatch({ type: 'SET_RISK', payload: res.structuralRisk });
       }
       const aiMsg: Message = {
-        id: `a-${Date.now()}`,
+        id: `a-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
         role: 'ai',
         text: res.message,
         timestamp: new Date(),
@@ -79,6 +78,27 @@ export function ChatPanel() {
         structuralRisk: res.structuralRisk,
       };
       setMessages(prev => [...prev, aiMsg]);
+    };
+
+    try {
+      const res = await sendMessage(text.trim());
+      show(res);
+      // "Use my current location" — only the browser knows where the user is
+      if (res.clientAction === 'request_geolocation') {
+        try {
+          const pos = await getBrowserPosition();
+          show(await setLocation({ ...pos, source: 'gps' }));
+        } catch (geoErr) {
+          setMessages(prev => [...prev, {
+            id: `g-${Date.now()}`,
+            role: 'ai',
+            text: geoErr instanceof Error ? geoErr.message : 'Could not get your location.',
+            timestamp: new Date(),
+            type: 'warning',
+            suggestions: ['Build it in Bengaluru', 'Build it in Mysuru', 'Build it in Mangaluru'],
+          }]);
+        }
+      }
     } catch (err) {
       const errMsg: Message = {
         id: `e-${Date.now()}`,

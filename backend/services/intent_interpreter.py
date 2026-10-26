@@ -4,14 +4,13 @@ Intent Interpreter — MCP Tool: interpret_command
 Uses Gemini API to parse natural language into structured actions.
 Falls back to regex-based keyword parsing if Gemini is unavailable.
 """
-import os
 import re
 import json
-import asyncio
 import logging
 from typing import Optional
 
 from models.building import BuildingState, InterpretedAction
+import services.gemini_client as gemini_client
 
 logger = logging.getLogger(__name__)
 
@@ -33,6 +32,8 @@ Available actions:
 - "reset_building"      — params: {}
 - "set_budget"          — params: {"amount": int}
 - "rename_room"         — params: {"floor_number": int, "room_index": int, "name": str}
+- "set_location"        — params: {"use_current": true} | {"lat": float, "lng": float} | {"query": str}
+- "chat"                — params: {"reply": str}
 - "unknown"             — params: {"reason": str}
 
 Rules:
@@ -47,6 +48,11 @@ Rules:
   ("add a 150 sqft bathroom", "2 bedrooms of 200 sq ft each"). NEVER invent a size —
   omit area_sqft when the user didn't give one; the app will ask them.
 - For budget amounts in lakh (e.g. "10 lakh"), convert to int (10 lakh = 1000000).
+- Use "set_location" when the user says where the building is:
+  "use my current location" / "I'm building here" → {"use_current": true};
+  "12.97, 77.59" → {"lat": 12.97, "lng": 77.59};
+  "build it in Mysuru", "plot near Hampi", "move the site to Udupi" → {"query": "<place as written>"}.
+- Use "chat" for questions, explanations or conversation that don't change the building (e.g. "why is my risk high?", "how much steel do I need?", "what is a plinth area?"). Put a helpful plain-text answer of at most 120 words in params.reply, using the building context. Never claim you changed the building; if they want a change, tell them the exact command to type.
 - If unclear, set clarification_needed=true and provide a helpful clarification_message.
 
 Return ONLY a valid JSON object, no markdown, no explanation:
@@ -59,8 +65,40 @@ Return ONLY a valid JSON object, no markdown, no explanation:
 }"""
 
 
+_CURRENT_LOCATION_RE = re.compile(
+    r"\b(my|current)\s+(gps\s+)?location\b|\bwhere\s+i\s+am\b|\b(build(ing)?|site|plot)\s+(is\s+)?here\b"
+    r"|\buse\s+(my\s+)?(gps|location)\b|\blocate\s+me\b"
+)
+_COORDS_RE = re.compile(r"(-?\d{1,2}\.\d+)\s*,\s*(-?\d{1,3}\.\d+)")
+_PLACE_RE = re.compile(
+    r"(?:\b(?:build|building|construct|constructing|plot|site|land|located|location)\b[^.?!]*?\b(?:in|at|near)"
+    r"|\b(?:set|change|move)\s+(?:the\s+)?(?:location|site|building|plot|it)\s+to"
+    r"|\b(?:location|site)\s*(?:is|:|=))\s+([A-Za-z][A-Za-z .,\-]{1,60})$",
+    re.IGNORECASE,
+)
+# Words that mean "floor 2", "at the top" etc. rather than a place
+_NOT_A_PLACE = re.compile(
+    r"^(the\s+)?(floor|ground|level|storey|top|bottom|front|back|rear|left|right|side|end|corner|centre|center|middle)\b",
+    re.IGNORECASE,
+)
+
+
+def _location_intent(message: str) -> InterpretedAction | None:
+    text = message.strip().rstrip(".!?")
+    if _CURRENT_LOCATION_RE.search(text.lower()):
+        return InterpretedAction(action="set_location", params={"use_current": True})
+    if m := _COORDS_RE.search(text):
+        return InterpretedAction(action="set_location", params={"lat": float(m.group(1)), "lng": float(m.group(2))})
+    m = _PLACE_RE.search(text)
+    if m and not _NOT_A_PLACE.match(m.group(1).strip()):
+        return InterpretedAction(action="set_location", params={"query": m.group(1).strip(" ,.")})
+    return None
+
+
 def _keyword_fallback(message: str) -> InterpretedAction:
     """Regex-based fallback parser when Gemini is unavailable."""
+    if located := _location_intent(message):
+        return located
     msg = message.lower().strip()
 
     # Pull out a room size ("150 sqft", "of 200 sq ft each") so the room
@@ -236,39 +274,57 @@ def _building_summary(state: BuildingState) -> str:
     )
 
 
+_QUESTION_RE = re.compile(r"\?\s*$|^\s*(what|why|how|which|when|where|who|can|could|should|would|is|are|does|do|explain|tell)\b", re.I)
+
+
+def _context(state: BuildingState) -> str:
+    """Building, site and cost context for Gemini."""
+    from services.boq_estimator import estimate_boq
+    from services.ml_loader import get_district
+    from services.structural_inspector import structural_risk_score
+    d = get_district(state.constraints.district_id) or {}
+    parts = [_building_summary(state)]
+    if d:
+        parts.append(
+            f"District: {d['name']} (seismic zone {d['seismicZone']}, PGA {d['pga']}g, {d['soilType']} soil, "
+            f"wind index {d['structuralWindIndex']}/10, climate {d['climateZone']})."
+        )
+    if state.location:
+        parts.append(f"Site: {state.location.address or f'{state.location.lat}, {state.location.lng}'}.")
+    if state.floors:
+        boq = estimate_boq(state)
+        risk = structural_risk_score(state)
+        parts.append(
+            f"KPWD Schedule of Rates estimate: Rs {boq.total:,} for {boq.plinth_area_m2} m2 plinth "
+            f"({boq.placeholders_used} placeholder rates)."
+            + (f" ML structural risk score: {risk:.0%}." if risk is not None else "")
+        )
+    return " ".join(parts)
+
+
 async def interpret_command(message: str, state: BuildingState) -> InterpretedAction:
     """
     MCP Tool: interpret_command
     Input:  { userMessage, buildingState }
     Output: InterpretedAction
-    """
-    api_key = os.getenv("GEMINI_API_KEY")
-    if not api_key:
-        logger.info("No GEMINI_API_KEY — using keyword fallback")
-        return _keyword_fallback(message)
 
+    Clear commands are parsed locally (instant, no API call). Questions and
+    anything the parser can't place go to Gemini, which returns either a
+    structured command or a "chat" reply.
+    """
+    fallback = _keyword_fallback(message)
+    if not gemini_client.available() or (fallback.action != "unknown" and not _QUESTION_RE.search(message)):
+        return fallback
+
+    raw = await gemini_client.generate(
+        f"Building context: {_context(state)}\n\nUser message: {message}",
+        GEMINI_SYSTEM_PROMPT, max_tokens=700, temperature=0.2, json_mode=True,
+    )
+    if raw is None:
+        return fallback
     try:
-        import google.generativeai as genai
-        genai.configure(api_key=api_key)
-        model = genai.GenerativeModel(
-            model_name="gemini-2.0-flash",
-            system_instruction=GEMINI_SYSTEM_PROMPT,
-        )
-        prompt = (
-            f"Building context: {_building_summary(state)}\n\n"
-            f"User command: {message}"
-        )
-        response = await asyncio.to_thread(
-            model.generate_content,
-            prompt,
-            generation_config={"temperature": 0.1, "max_output_tokens": 256},
-        )
-        raw = response.text.strip()
-        # Strip markdown fences if present
-        raw = re.sub(r"^```(?:json)?\s*", "", raw)
-        raw = re.sub(r"\s*```$", "", raw)
-        data = json.loads(raw)
-        return InterpretedAction(**data)
-    except Exception as exc:
-        logger.warning("Gemini call failed (%s), using keyword fallback", exc)
-        return _keyword_fallback(message)
+        raw = re.sub(r"^```(?:json)?\s*|\s*```$", "", raw.strip())
+        return InterpretedAction(**json.loads(raw))
+    except (ValueError, TypeError) as exc:
+        logger.warning("Unparseable Gemini reply (%s), using keyword fallback", exc)
+        return fallback

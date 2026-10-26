@@ -274,7 +274,7 @@ function ExportPanel() {
       content = JSON.stringify(state, null, 2);
       mime = 'application/json';
     } else {
-      const lines = ['ARCHI-MIND AI — Project Summary', '='.repeat(36), '', `Floors: ${state.floors.length}`, `Budget Used: ${fmt(state.budget.used)} / ${fmt(state.budget.total)}`, ''];
+      const lines = ['निर्माण AI — Project Summary', '='.repeat(36), '', `Floors: ${state.floors.length}`, `Budget Used: ${fmt(state.budget.used)} / ${fmt(state.budget.total)}`, ''];
       state.floors.forEach(f => { lines.push(`Floor ${f.number}: ${f.rooms.length} room(s)`); f.rooms.forEach(r => lines.push(`  - ${r.name} (${r.type})${r.area_sqft ? ` — ${r.area_sqft} sqft` : ''}`)); });
       content = lines.join('\n');
       mime = 'text/plain';
@@ -283,7 +283,7 @@ function ExportPanel() {
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `archi-mind-project.${format}`;
+    a.download = `nirman-ai-project.${format}`;
     a.click();
     URL.revokeObjectURL(url);
     setDone(true);

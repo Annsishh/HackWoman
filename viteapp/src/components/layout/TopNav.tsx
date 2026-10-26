@@ -53,7 +53,7 @@ export function TopNav({ currentPage, onNavigate, onOpenProfile }: TopNavProps) 
       {/* Logo */}
       <button onClick={() => onNavigate('home')} style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer', display: 'flex', alignItems: 'center', transform: 'none' }}>
         <span style={{ fontWeight: 800, fontSize: '1.15rem', letterSpacing: '0.04em', color: 'var(--text-primary)' }}>
-          ARCHI-MIND <span style={{ color: '#06b6d4' }}>AI</span>
+          निर्माण <span style={{ color: '#06b6d4' }}>AI</span>
         </span>
       </button>
 

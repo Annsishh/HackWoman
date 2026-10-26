@@ -5,6 +5,7 @@ Generates contextual, actionable recommendations based on the current
 building state, what action was just taken, and any constraint violations.
 """
 from models.building import BuildingState
+from services.boq_estimator import next_floor_cost, room_cost
 from services.materials_estimator import format_cost
 from services.structural_inspector import structural_risk_score
 from typing import Optional
@@ -35,7 +36,7 @@ def generate_suggestions(
             if "overhang" in err.lower() or "structural" in err.lower():
                 suggestions.append("Widen the floor below before expanding the upper floor.")
             if "budget" in err.lower():
-                remaining_rooms = budget.remaining // budget.costPerRoom
+                remaining_rooms = budget.remaining // max(1, room_cost(state, state.constraints.defaultRoomSqft))
                 if remaining_rooms > 0:
                     suggestions.append(f"You can still add up to {remaining_rooms} room(s) within budget.")
             if "maximum" in err.lower() and "room" in err.lower():
@@ -95,7 +96,7 @@ def generate_suggestions(
 
     # --- What's next suggestions ---
     can_add_floor = n_floors < state.constraints.maxFloors
-    floor_cost = budget.costPerFloor + budget.costPerRoom
+    floor_cost = next_floor_cost(state)  # priced from the KPWD Schedule of Rates
     if can_add_floor and budget.remaining >= floor_cost:
         suggestions.append(
             f"Add another floor ({format_cost(floor_cost)}) — "
@@ -105,10 +106,11 @@ def generate_suggestions(
     if n_floors > 0:
         least_full = min(floors, key=lambda f: len(f.rooms))
         can_add = state.constraints.maxRoomsPerFloor - len(least_full.rooms)
-        if can_add > 0 and budget.remaining >= budget.costPerRoom:
+        per_room = room_cost(state, state.constraints.defaultRoomSqft)
+        if can_add > 0 and budget.remaining >= per_room:
             suggestions.append(
                 f"Expand Floor {least_full.number}: room for {can_add} more room(s) "
-                f"({format_cost(can_add * budget.costPerRoom)})."
+                f"(≈{format_cost(per_room)} each for flooring at {state.constraints.defaultRoomSqft} sq ft)."
             )
 
     # --- Post-reset ---

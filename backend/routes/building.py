@@ -65,6 +65,9 @@ async def configure_building(config: ConfigRequest) -> BuildingState:
         state.constraints.defaultRoomSqft = config.default_room_sqft
     if config.district_id:
         state.constraints.district_id = config.district_id
+        # A district picked by hand overrides a site located elsewhere
+        if state.location and state.location.district_id != config.district_id:
+            state.location = None
 
     # Keep the user's site features that still fit on the new plot
     old_features = state.site.features

@@ -2,7 +2,7 @@ import { useState, useRef, useCallback, useMemo, useEffect } from 'react';
 import { RotateCcw, ZoomIn, ZoomOut, Plus, Eye, EyeOff, Layers, LayoutGrid, Maximize2, Minimize2, Box, Square } from 'lucide-react';
 import { useBuilding } from '../../context/BuildingContext';
 import { sendMessage } from '../../services/api';
-import { DISTRICT_COORDS } from '../../services/liveData';
+import { siteCoords } from '../../services/liveData';
 import { FloorPlanEditor } from '../planner/FloorPlanEditor';
 import { ROOM_META, SITE_META, roomMeta, insideUnion, overlaps } from '../../utils/rooms';
 import { userWindows } from '../../utils/walls';
@@ -115,6 +115,60 @@ function planWalls(footprint: Rect[], rooms: Room[], W: number, D: number) {
 
 const FACING_LIGHT: Record<Facing, number> = { front: 1, right: 0.85, left: 0.7, back: 0.6 };
 
+/**
+ * The part of a floor's top not covered by the floor above (e.g. beside an L,
+ * U or T storey, or the rim round a smaller pyramid storey). Returns the roof
+ * slabs to draw, and parapet runs only on its outer edges — where it meets the
+ * upper floor, that floor's wall rises instead.
+ */
+function exposedRoof(footprint: Rect[], above: Rect[], W: number, D: number) {
+  const mark = (rects: Rect[]) => {
+    const g = new Uint8Array(W * D);
+    for (const p of rects)
+      for (let z = Math.max(0, p.z); z < Math.min(D, p.z + p.d); z++)
+        for (let x = Math.max(0, p.x); x < Math.min(W, p.x + p.w); x++) g[z * W + x] = 1;
+    return g;
+  };
+  const own = mark(footprint), up = mark(above);
+  const exposed = (x: number, z: number) => x >= 0 && z >= 0 && x < W && z < D && own[z * W + x] === 1 && up[z * W + x] === 0;
+  const outside = (x: number, z: number) => x < 0 || z < 0 || x >= W || z >= D || own[z * W + x] === 0;
+
+  // Slabs: runs along each row, merged downwards while the run stays the same
+  const slabs: Rect[] = [];
+  let open = new Map<string, Rect>();
+  for (let z = 0; z <= D; z++) {
+    const next = new Map<string, Rect>();
+    for (let x = 0; z < D && x < W;) {
+      if (!exposed(x, z)) { x++; continue; }
+      const x0 = x;
+      while (x < W && exposed(x, z)) x++;
+      const key = `${x0}:${x}`;
+      const r = open.get(key);
+      if (r) { r.d++; next.set(key, r); open.delete(key); } else next.set(key, { x: x0, z, w: x - x0, d: 1 });
+    }
+    open.forEach(r => slabs.push(r));
+    open = next;
+  }
+
+  // Parapets: edges between an exposed cell and the outside, merged into runs
+  const edges: { axis: 'x' | 'z'; x: number; z: number; len: number; facing: Facing }[] = [];
+  const scan = (axis: 'x' | 'z', c: number, n: number, side: (t: number) => Facing | null) => {
+    let cur: Facing | null = null, start = 0;
+    for (let t = 0; t <= n; t++) {
+      const f = t < n ? side(t) : null;
+      if (f !== cur) {
+        if (cur) edges.push({ axis, x: axis === 'x' ? start : c, z: axis === 'x' ? c : start, len: t - start, facing: cur });
+        cur = f; start = t;
+      }
+    }
+  };
+  for (let z = 0; z <= D; z++)
+    scan('x', z, W, x => (exposed(x, z - 1) && outside(x, z) ? 'front' : exposed(x, z) && outside(x, z - 1) ? 'back' : null));
+  for (let x = 0; x <= W; x++)
+    scan('z', x, D, z => (exposed(x - 1, z) && outside(x, z) ? 'right' : exposed(x, z) && outside(x - 1, z) ? 'left' : null));
+  return { slabs, edges };
+}
+
 /** Where the main entrance goes: a front-facing ground-floor wall, preferring the hallway / living room. */
 function entrance(ext: ExtRun[]): ExtRun | null {
   const front = ext.filter(r => r.facing === 'front');
@@ -223,36 +277,11 @@ function slopedFace(O: V3, U: V3, V: V3, w: number, h: number, clip: string): Re
   };
 }
 
-const PYRAMID_STEP = 0.075; // each side steps in 7.5% per pyramid floor (matches the backend's 0.85 taper)
-
-/** A pyramid storey: four glazed faces sloping in from the footprint to a smaller top. */
-function PyramidShell({ fp, k, H, colors }: { fp: Rect[]; k: number; H: number; colors: ReturnType<typeof pc> }) {
-  const x0 = Math.min(...fp.map(p => p.x)) * k, z0 = Math.min(...fp.map(p => p.z)) * k;
-  const x1 = Math.max(...fp.map(p => p.x + p.w)) * k, z1 = Math.max(...fp.map(p => p.z + p.d)) * k;
-  const W = x1 - x0, D = z1 - z0, sx = W * PYRAMID_STEP, sz = D * PYRAMID_STEP;
-  const Lf = Math.hypot(H, sz), Ls = Math.hypot(H, sx);
-  const glass = (light: number): React.CSSProperties => ({
-    background: `repeating-linear-gradient(90deg, rgba(226,232,240,0.55) 0 1px, transparent 1px 22px),
-                 repeating-linear-gradient(0deg, rgba(226,232,240,0.45) 0 1px, transparent 1px 16px),
-                 linear-gradient(180deg, ${colors.top}, ${colors.front})`,
-    filter: `brightness(${light})`, opacity: 0.92,
-  });
-  return (
-    <>
-      <div style={{ ...slopedFace([x0, -H, z1 - sz], [1, 0, 0], [0, H, sz], W, Lf, `polygon(${sx}px 0, ${W - sx}px 0, 100% 100%, 0 100%)`), ...glass(1) }} />
-      <div style={{ ...slopedFace([x0, -H, z0 + sz], [1, 0, 0], [0, H, -sz], W, Lf, `polygon(${sx}px 0, ${W - sx}px 0, 100% 100%, 0 100%)`), ...glass(0.6) }} />
-      <div style={{ ...slopedFace([x0 + sx, -H, z0], [0, 0, 1], [-sx, H, 0], D, Ls, `polygon(${sz}px 0, ${D - sz}px 0, 100% 100%, 0 100%)`), ...glass(0.7) }} />
-      <div style={{ ...slopedFace([x1 - sx, -H, z0], [0, 0, 1], [sx, H, 0], D, Ls, `polygon(${sz}px 0, ${D - sz}px 0, 100% 100%, 0 100%)`), ...glass(0.85) }} />
-    </>
-  );
-}
-
-/** Pointed cap on a top-floor pyramid: four triangles meeting at the apex. */
+/** Pointed cap on a top-floor pyramid: four triangles rising from the floor's walls to the apex. */
 function PyramidRoof({ fp, k, H, colors }: { fp: Rect[]; k: number; H: number; colors: ReturnType<typeof pc> }) {
   const bx0 = Math.min(...fp.map(p => p.x)) * k, bz0 = Math.min(...fp.map(p => p.z)) * k;
   const bx1 = Math.max(...fp.map(p => p.x + p.w)) * k, bz1 = Math.max(...fp.map(p => p.z + p.d)) * k;
-  const sx = (bx1 - bx0) * PYRAMID_STEP, sz = (bz1 - bz0) * PYRAMID_STEP;
-  const x0 = bx0 + sx, x1 = bx1 - sx, z0 = bz0 + sz, z1 = bz1 - sz;   // top of the sloped storey
+  const x0 = bx0, x1 = bx1, z0 = bz0, z1 = bz1;   // the storey's own outline — it steps in per floor already
   const W = x1 - x0, D = z1 - z0, cx = (x0 + x1) / 2, cz = (z0 + z1) / 2;
   const P = Math.min(W, D) * 0.55;                                     // apex height
   const top = -H - P;
@@ -308,18 +337,24 @@ interface FloorBlockProps {
   y: number;        // world y of this floor's slab
   rotX: number;
   rotY: number;
+  above?: Rect[];   // footprint of the visible floor stacked on top — its uncovered part gets a roof
 }
 
-function FloorBlock({ floor, index, isTop, plan, pointedRoof, wallsPulse, wallLabel, extT, intT, k, W, D, showLabels, y, rotX, rotY }: FloorBlockProps) {
+function FloorBlock({ floor, index, isTop, plan, pointedRoof, wallsPulse, wallLabel, extT, intT, k, W, D, showLabels, y, rotX, rotY, above }: FloorBlockProps) {
   const colors = pc(index);
   const H = plan ? PLAN_WALL_H : FLOOR_H;
   const grid = 5 * k; // 5-ft grid on the slab in plan mode
-  const sloped = floor.shape === 'pyramid' && !plan && floor.footprint.length > 0;
-  const partH = sloped ? H * 0.6 : H; // keep partitions inside the sloping walls
+  // Pyramid storeys are ordinary floors on a smaller (stepped-in) footprint; only the top one gets a pointed cap
+  const pyramid = floor.shape === 'pyramid' && !plan && floor.footprint.length > 0;
+  const partH = H;
   const { ext, int, placed } = useMemo(() => planWalls(floor.footprint, floor.rooms, W, D), [floor.footprint, floor.rooms, W, D]);
   const door = index === 0 ? entrance(ext) : null;
   const windows = useMemo(() => windowsByRun(ext), [ext]);
   const labelRun = ext.filter(r => r.facing === 'front').reduce<ExtRun | null>((a, b) => (!a || b.len > a.len ? b : a), null);
+  const terrace = useMemo(
+    () => (above && !plan ? exposedRoof(floor.footprint, above, W, D) : null),
+    [above, plan, floor.footprint, W, D],
+  );
 
   return (
     <div style={{
@@ -371,12 +406,11 @@ function FloorBlock({ floor, index, isTop, plan, pointedRoof, wallsPulse, wallLa
         </div>
       ))}
 
-      {/* Pyramid storey: sloped glazed faces (and an apex on top) instead of upright façades */}
-      {sloped && <PyramidShell fp={floor.footprint} k={k} H={H} colors={colors} />}
-      {sloped && pointedRoof && <PyramidRoof fp={floor.footprint} k={k} H={H} colors={colors} />}
+      {/* Top pyramid storey: pointed cap instead of a flat terrace */}
+      {pyramid && pointedRoof && <PyramidRoof fp={floor.footprint} k={k} H={H} colors={colors} />}
 
       {/* Exterior façades */}
-      {!sloped && ext.map((run, i) => (
+      {ext.map((run, i) => (
         <FacadeRun key={i} run={run} k={k} H={H} colors={colors} windows={plan ? null : windows.get(run) ?? null} hasDoor={run === door}>
           {showLabels && !plan && run === labelRun && (
             <span style={{
@@ -400,7 +434,7 @@ function FloorBlock({ floor, index, isTop, plan, pointedRoof, wallsPulse, wallLa
       ))}
 
       {/* Wall thickness — inner faces and caps (flash when the user changes it) */}
-      {!sloped && ext.map((run, i) => (
+      {ext.map((run, i) => (
         <WallBody key={`we${i}`} axis={run.axis} x={run.x * k} z={run.z * k} len={run.len * k} t={extT} H={H}
           inward={run.facing === 'front' || run.facing === 'right' ? -1 : 1}
           cap="linear-gradient(90deg,#d6d3d1,#a8a29e)" face="linear-gradient(180deg,#e7e5e4,#c4c0bc)" pulse={wallsPulse} />
@@ -408,6 +442,21 @@ function FloorBlock({ floor, index, isTop, plan, pointedRoof, wallsPulse, wallLa
       {int.map((p, i) => (
         <WallBody key={`wi${i}`} axis={p.axis} x={p.x * k} z={p.z * k} len={p.len * k} t={intT} H={H} inward={0}
           cap="#e2e8f0" face={null} pulse={wallsPulse} />
+      ))}
+
+      {/* Terrace over the part of this floor the floor above doesn't cover */}
+      {terrace?.slabs.map((p, i) => (
+        <div key={`ts${i}`} style={{
+          ...flat(p.x * k, -H, p.z * k, p.w * k, p.d * k),
+          background: 'linear-gradient(135deg, #8a94a0, #5c6670)',
+        }} />
+      ))}
+      {terrace?.edges.map((run, i) => (
+        <div key={`tp${i}`} style={{
+          ...(run.axis === 'x' ? wallX(run.x * k, -H - ROOF_H, run.z * k, run.len * k, ROOF_H) : wallZ(run.x * k, -H - ROOF_H, run.z * k, run.len * k, ROOF_H)),
+          background: 'linear-gradient(180deg, #6b747e, #3f464d)',
+          filter: `brightness(${FACING_LIGHT[run.facing]})`,
+        }} />
       ))}
 
       {/* Room labels — float above the walls of the floor you're looking at */}
@@ -565,6 +614,8 @@ export function BuildingVisualizer() {
   const [showLabels, setShowLabels] = useState(true);
   const [exploded, setExploded] = useState(false);
   const [adding, setAdding] = useState(false);
+  // Why "Add Floor" was refused (e.g. not enough budget), shown as a popup
+  const [blocked, setBlocked] = useState<{ title: string; message: string; budget: boolean } | null>(null);
   const [planOpen, setPlanOpen] = useState(false);
   // Click-to-place in 3D; the design panel on the left arms it
   const { placing, setPlacing, focusFloor, setFocusFloor, setNotice, wallsPulse } = useDesign();
@@ -624,7 +675,7 @@ export function BuildingVisualizer() {
     [groundFloor, Wft, Dft],
   );
   const door = doorRun ? { x: (doorRun.x + doorRun.len / 2) * k, z: doorRun.z * k } : { x: BASE_W / 2, z: BASE_D };
-  const coords = DISTRICT_COORDS[state.district?.id ?? ''] ?? DISTRICT_COORDS['bengaluru-urban'];
+  const coords = siteCoords(state.district?.id ?? '', state.location);
 
   const handleAddFloor = async () => {
     if (adding) return;
@@ -633,7 +684,13 @@ export function BuildingVisualizer() {
       const res = await sendMessage('add a floor');
       if (res.updatedState) dispatch({ type: 'SET_STATE', payload: res.updatedState });
       if (res.structuralRisk !== undefined) dispatch({ type: 'SET_RISK', payload: res.structuralRisk });
-    } catch { /* ignore */ }
+      if (!res.updatedState && res.message_type !== 'success') {
+        const budget = /budget/i.test(res.message);
+        setBlocked({ title: budget ? 'Not enough money' : "Can't add a floor", message: res.message, budget });
+      }
+    } catch (err) {
+      setBlocked({ title: "Can't add a floor", message: err instanceof Error ? err.message : 'Could not reach the backend.', budget: false });
+    }
     finally { setAdding(false); }
   };
 
@@ -836,17 +893,17 @@ export function BuildingVisualizer() {
         )}
 
         {/* Which floor is shown, and a way back to the whole building */}
-        {cutAt && cutAt < totalFloors && (
+        {cutAt && !exploded && (cutAt < totalFloors || !planMode) && (
           <div onMouseDown={e => e.stopPropagation()} onClick={e => e.stopPropagation()} style={{
             position: 'absolute', top: unplacedCount > 0 ? '3rem' : '0.75rem', left: '50%', transform: 'translateX(-50%)', zIndex: 5,
             display: 'flex', alignItems: 'center', gap: '0.6rem', padding: '0.35rem 0.5rem 0.35rem 0.85rem',
             background: 'rgba(124,58,237,0.15)', border: '1px solid rgba(124,58,237,0.5)', borderRadius: '20px',
             color: '#e9d5ff', fontSize: '0.7rem', fontWeight: 700,
           }}>
-            Showing Floor {cutAt} — floors above hidden
+            {cutAt < totalFloors ? `Showing Floor ${cutAt} — floors above hidden` : `Floor ${cutAt} roof hidden to show its rooms`}
             {!placing && (
               <button onClick={() => setFocusFloor(null)} style={{ background: 'rgba(255,255,255,0.1)', border: 'none', borderRadius: '12px', padding: '0.2rem 0.6rem', color: '#fff', fontSize: '0.66rem', fontWeight: 700, cursor: 'pointer' }}>
-                Show whole building
+                {cutAt < totalFloors ? "Show whole building" : "Show roof"}
               </button>
             )}
           </div>
@@ -1015,6 +1072,8 @@ export function BuildingVisualizer() {
                   y={floorY(floor.number - 1)}
                   rotX={rotX}
                   rotY={rotY}
+                  // Stacked view only: the floor on top leaves part of this one open to the sky
+                  above={!exploded && !planMode ? visibleFloors.find(f => f.number === floor.number + 1)?.footprint : undefined}
                 />
               ))}
               {!exploded && !planMode && !cutAt && floors[totalFloors - 1]?.shape !== 'pyramid' && <RoofCap floor={floors[totalFloors - 1]} k={k} W={Wft} D={Dft} y={floorY(totalFloors)} />}
@@ -1076,6 +1135,28 @@ export function BuildingVisualizer() {
       </div>
 
       {planOpen && <FloorPlanEditor onClose={() => setPlanOpen(false)} />}
+
+      {blocked && (
+        <div role="dialog" aria-modal="true" onClick={() => setBlocked(null)}
+          style={{ position: 'fixed', inset: 0, zIndex: 3000, background: 'rgba(0,0,0,0.55)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem' }}>
+          <div onClick={e => e.stopPropagation()}
+            style={{ width: 'min(380px, 100%)', background: '#13131d', border: `1px solid ${blocked.budget ? '#ef444466' : '#f59e0b66'}`, borderTop: `3px solid ${blocked.budget ? '#ef4444' : '#f59e0b'}`, borderRadius: '12px', padding: '1.1rem 1.2rem', boxShadow: '0 20px 50px rgba(0,0,0,0.6)' }}>
+            <div style={{ fontSize: '1rem', fontWeight: 800, color: '#f1f5f9', marginBottom: '0.5rem' }}>
+              {blocked.budget ? '💸 ' : '⚠️ '}{blocked.title}
+            </div>
+            <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', lineHeight: 1.5 }}>{blocked.message}</div>
+            {blocked.budget && (
+              <div style={{ fontSize: '0.72rem', color: 'var(--text-tertiary)', marginTop: '0.6rem' }}>
+                Raise the budget (e.g. type "set budget to 80 lakh" in chat) or remove a floor or room to free up money.
+              </div>
+            )}
+            <button onClick={() => setBlocked(null)} autoFocus
+              style={{ marginTop: '0.9rem', width: '100%', padding: '0.5rem', borderRadius: '8px', border: 'none', background: blocked.budget ? '#ef4444' : '#f59e0b', color: '#fff', fontWeight: 700, fontSize: '0.8rem', cursor: 'pointer' }}>
+              OK
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

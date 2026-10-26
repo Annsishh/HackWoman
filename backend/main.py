@@ -6,6 +6,7 @@ from dotenv import load_dotenv
 
 from routes.chat import router as chat_router
 from routes.building import router as building_router
+from routes.location import router as location_router
 
 load_dotenv()
 
@@ -37,6 +38,7 @@ app.add_middleware(
 # ── Routers ───────────────────────────────────────────────────────────────────
 app.include_router(chat_router, prefix="/api", tags=["chat"])
 app.include_router(building_router, prefix="/api", tags=["building"])
+app.include_router(location_router, prefix="/api", tags=["location"])
 
 
 @app.get("/")

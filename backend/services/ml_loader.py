@@ -24,6 +24,7 @@ try:
     from features import (  # noqa: E402  (path inserted above)
         build_cost_feature_vector,
         build_risk_feature_vector,
+        district_cost_multiplier,
         load_districts,
     )
     _IMPORTS_OK = True
@@ -45,6 +46,12 @@ def _districts() -> dict:
 
 def get_district(district_id: str) -> dict | None:
     return _districts().get(district_id)
+
+
+def district_premium(district_id: str) -> float | None:
+    """Seismic/soil/wind cost premium for a district (1.0 = none), or None if unknown."""
+    district = get_district(district_id)
+    return district_cost_multiplier(district) if district else None
 
 
 @lru_cache(maxsize=1)
@@ -109,7 +116,8 @@ def predict_risk(
     if model is None or district is None:
         return None
     features = build_risk_feature_vector(num_floors, total_rooms, max_room_density, room_count_std, district)
-    return float(model.predict_proba([features])[0][1])
+    # Regressor on the continuous risk score (clamped: trees can overshoot slightly)
+    return max(0.0, min(1.0, float(model.predict([features])[0])))
 
 
 def _meta(name: str) -> dict | None:

@@ -151,6 +151,24 @@ class Constraints(BaseModel):
     # Wall thickness in inches (9" ≈ 230 mm brick, 4.5" ≈ 115 mm partition)
     exteriorWallIn: float = 9
     interiorWallIn: float = 4.5
+    # KPWD rates exclude GST; the bill of quantities adds it only when asked
+    includeGst: bool = False
+
+
+class SiteLocation(BaseModel):
+    """Where the building is, resolved from GPS, a map click, typed coordinates or a place name."""
+    lat: float
+    lng: float
+    address: str = ""
+    district_id: str
+    # District name as the geocoder reported it — differs from ours when we fell back to the nearest one
+    reported_district: str = ""
+    in_karnataka: bool = True
+    source: Literal["gps", "search", "map", "coords"]
+    # True when the district is the nearest supported one rather than the one the point lies in
+    approximated: bool = False
+    # True when the geocoder couldn't be reached and the district came from distance alone
+    offline: bool = False
 
 
 class HistoryEntry(BaseModel):
@@ -164,6 +182,7 @@ class BuildingState(BaseModel):
     budget: Budget = Field(default_factory=Budget)
     constraints: Constraints = Field(default_factory=Constraints)
     site: SiteLayout = Field(default_factory=SiteLayout)
+    location: Optional[SiteLocation] = None
     history: List[HistoryEntry] = Field(default_factory=list)
 
 
@@ -178,6 +197,40 @@ class MaterialsCostBreakdown(BaseModel):
     steel: int
     glass: int
     total: int
+    # "kpwd_sr" (bill of quantities), "ml_model" or "formula"
+    source: str = "formula"
+
+
+class BOQLine(BaseModel):
+    key: str
+    label: str
+    # material | labour | add_on | fitting | regional | tax
+    category: str
+    qty: float
+    unit: str
+    rate: float
+    amount: int
+    ref: str = ""
+    page: str = ""
+    # verified | placeholder | interim | derived
+    status: str = "verified"
+
+
+class BOQBreakdown(BaseModel):
+    """Bill of quantities priced from the KPWD Schedule of Rates."""
+    district_id: str
+    plinth_area_m2: float
+    floors: int
+    relation_set: str            # "single" | "double" | "none"
+    approximate: bool = False
+    lines: List[BOQLine] = Field(default_factory=list)
+    subtotal: int = 0            # before regional adjustment and GST
+    regional_pct: float = 0.0
+    regional_status: str = "interim"
+    include_gst: bool = False
+    total: int = 0
+    placeholders_used: int = 0
+    notes: List[str] = Field(default_factory=list)
 
 
 class ValidationResult(BaseModel):
@@ -200,6 +253,8 @@ class ChatResponse(BaseModel):
     animationHint: Optional[AnimationHint] = None
     costBreakdown: Optional[MaterialsCostBreakdown] = None
     structuralRisk: Optional[float] = None
+    # Something only the browser can do, e.g. "request_geolocation"
+    clientAction: Optional[str] = None
 
 
 class InterpretedAction(BaseModel):

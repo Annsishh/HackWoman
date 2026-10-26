@@ -100,7 +100,7 @@ export function LoginPage() {
         {/* Logo */}
         <div style={{ textAlign: 'center', marginBottom: '2rem' }}>
           <div style={{ fontSize: '1.3rem', fontWeight: 800, letterSpacing: '0.04em', marginBottom: '0.35rem' }}>
-            ARCHI-MIND <span style={{ color: '#06b6d4' }}>AI</span>
+            निर्माण <span style={{ color: '#06b6d4' }}>AI</span>
           </div>
           <div style={{ fontSize: '1.1rem', fontWeight: 700, color: '#f1f5f9', marginBottom: '0.25rem' }}>
             {mode === 'login' ? 'Welcome back' : 'Create account'}

@@ -45,7 +45,9 @@ def _make_initial_state() -> BuildingState:
 
 class _StateStore:
     def __init__(self):
-        self._state: BuildingState = self._load() or _make_initial_state()
+        from services.building_engine import _recalculate_budget
+        # Reprice on load: a state saved under older pricing would otherwise show a stale budget
+        self._state: BuildingState = _recalculate_budget(self._load() or _make_initial_state())
 
     def get(self) -> BuildingState:
         return self._state
@@ -63,7 +65,7 @@ class _StateStore:
         if not STATE_FILE or not os.path.exists(STATE_FILE):
             return None
         try:
-            return BuildingState.model_validate_json(Path(STATE_FILE).read_text())
+            return BuildingState.model_validate_json(Path(STATE_FILE).read_text(encoding="utf-8"))
         except Exception as exc:  # old/corrupt file — start fresh rather than crash
             logger.warning("Ignoring saved building state %s: %s", STATE_FILE, exc)
             return None
@@ -73,9 +75,10 @@ class _StateStore:
             return
         try:
             tmp = Path(STATE_FILE).with_suffix(".tmp")
-            tmp.write_text(self._state.model_dump_json())
+            # Explicit UTF-8: Windows defaults to cp1252, which can't encode the ₹ in history entries
+            tmp.write_text(self._state.model_dump_json(), encoding="utf-8")
             tmp.replace(STATE_FILE)  # atomic, so a crash never leaves half a file
-        except OSError as exc:
+        except (OSError, ValueError) as exc:  # a failed save must never fail the request
             logger.warning("Could not save building state: %s", exc)
 
 

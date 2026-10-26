@@ -1,24 +1,34 @@
 import { useCallback, useEffect, useState } from 'react';
 import { RefreshCw, Wind, Thermometer, Activity, Sun } from 'lucide-react';
 import { useBuilding } from '../../context/BuildingContext';
-import { fetchLiveConditions, QUAKE_SEARCH, type LiveConditions as Live } from '../../services/liveData';
+import { fetchClimate, fetchLiveConditions, QUAKE_SEARCH, type ClimateBaseline, type LiveConditions as Live } from '../../services/liveData';
 
 const REFRESH_MS = 10 * 60 * 1000;
 
-/** Real-time weather + recent earthquakes for the selected district, next to its design values. */
+/** Real-time weather + recent earthquakes at the site, compared with the site's own recent climate (all from APIs). */
 export function LiveConditions() {
   const { state } = useBuilding();
   const district = state.district;
   const [data, setData] = useState<Live | null>(null);
+  const [climate, setClimate] = useState<ClimateBaseline | null>(null);
   const [loading, setLoading] = useState(false);
 
+  // Use the exact site once one is set, so weather and quakes are for that spot, not the district HQ
+  const lat = state.location?.lat;
+  const lng = state.location?.lng;
   const load = useCallback(async (signal?: AbortSignal) => {
     setLoading(true);
     try {
-      setData(await fetchLiveConditions(district.id, signal));
+      const site = lat !== undefined && lng !== undefined ? { lat, lng } : null;
+      const live = await fetchLiveConditions({ id: district.id, name: district.name }, signal, site);
+      setData(live);
+      // Baseline arrives later; live readings show first
+      fetchClimate(live.coords[0], live.coords[1], signal)
+        .then(c => { if (!signal?.aborted) setClimate(c); })
+        .catch(() => { /* baseline unavailable */ });
     } catch { /* aborted */ }
     finally { setLoading(false); }
-  }, [district.id]);
+  }, [district.id, district.name, lat, lng]);
 
   useEffect(() => {
     const ctrl = new AbortController();
@@ -30,7 +40,9 @@ export function LiveConditions() {
   const w = data?.weather;
   const quakes = data?.quakes;
   const strongest = quakes && quakes.length ? quakes.reduce((a, b) => (b.magnitude > a.magnitude ? b : a)) : null;
-  const gustVsDesign = w ? Math.round((w.gustKmh / district.wind.basicWindSpeed) * 100) : null;
+
+  // Live gust as a share of the strongest gust recorded at this spot in the last few years
+  const gustVsRecord = w && climate ? Math.round((w.gustKmh / climate.recordGustKmh) * 100) : null;
 
   return (
     <div>
@@ -51,14 +63,15 @@ export function LiveConditions() {
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.45rem' }}>
           <Tile icon={<Thermometer size={11} />} color="#f59e0b" label="TEMP"
             value={w ? `${w.temperatureC.toFixed(1)}°C` : '—'}
-            sub={w ? `${w.humidityPct}% RH · design ${district.thermal.avgSummerTempC}°C` : 'unavailable'} />
+            sub={w ? `${w.humidityPct}% RH${climate ? ` · hot day ${climate.hotDayC}°C` : ''}` : 'unavailable'}
+            warn={!!w && !!climate && w.temperatureC >= climate.hotDayC} />
           <Tile icon={<Wind size={11} />} color="#06b6d4" label="WIND"
             value={w ? `${Math.round(w.windKmh)} km/h` : '—'}
-            sub={w ? `gust ${Math.round(w.gustKmh)} · ${gustVsDesign}% of design` : 'unavailable'}
-            warn={gustVsDesign !== null && gustVsDesign >= 60} />
+            sub={w ? `gust ${Math.round(w.gustKmh)}${gustVsRecord !== null ? ` · ${gustVsRecord}% of record` : ''}` : 'unavailable'}
+            warn={gustVsRecord !== null && gustVsRecord >= 80} />
           <Tile icon={<Sun size={11} />} color="#fbbf24" label="SOLAR"
             value={w ? `${Math.round(w.solarWm2)} W/m²` : '—'}
-            sub={`design ${district.thermal.solarRadiation} W/m²`} />
+            sub={climate ? `avg daily peak ${climate.avgPeakSolarWm2} W/m²` : w ? 'baseline unavailable' : 'unavailable'} />
           <Tile icon={<Activity size={11} />} color="#ef4444" label="QUAKES"
             value={quakes ? String(quakes.length) : '—'}
             sub={quakes
@@ -83,7 +96,10 @@ export function LiveConditions() {
 
       {data && (
         <div style={{ fontSize: '0.55rem', color: 'var(--text-tertiary)', marginTop: '0.45rem' }}>
-          Open-Meteo &amp; USGS · quakes within {QUAKE_SEARCH.radiusKm} km, last {QUAKE_SEARCH.days} days · updated {new Date(data.fetchedAt).toLocaleTimeString()}
+          Open-Meteo &amp; USGS at {data.coords[0].toFixed(3)}, {data.coords[1].toFixed(3)}
+          {data.coordsSource === 'site' ? ' (your site)' : data.coordsSource === 'geocoded' ? ` (${district.name}, geocoded)` : ' (district HQ, offline fallback)'}
+          {climate && ` · baseline ${climate.from} → ${climate.to}`}
+          {` · quakes within ${QUAKE_SEARCH.radiusKm} km, last ${QUAKE_SEARCH.days} days · updated ${new Date(data.fetchedAt).toLocaleTimeString()}`}
         </div>
       )}
       <style>{`@keyframes livePulse{0%,100%{opacity:1}50%{opacity:0.35}} @keyframes spin{to{transform:rotate(360deg)}}`}</style>

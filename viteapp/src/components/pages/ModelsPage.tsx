@@ -306,7 +306,7 @@ export function ModelsPage() {
     return (
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden', background: 'var(--bg-primary)' }}>
         <div style={{ padding: '1.5rem 2rem', borderBottom: '1px solid var(--border-subtle)' }}>
-          <div style={{ fontSize: '0.65rem', letterSpacing: '0.12em', color: 'var(--text-tertiary)', marginBottom: '0.25rem' }}>ARCHI-MIND AI</div>
+          <div style={{ fontSize: '0.65rem', letterSpacing: '0.12em', color: 'var(--text-tertiary)', marginBottom: '0.25rem' }}>निर्माण AI</div>
           <h2 style={{ margin: 0, fontSize: '1.4rem', fontWeight: 700 }}>Upgrade to Pro</h2>
           <p style={{ margin: '0.25rem 0 0', fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
             Unlock full engineering intelligence for Karnataka building design

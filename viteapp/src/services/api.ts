@@ -3,7 +3,7 @@
  * All network calls go through this module.
  */
 import { API_BASE_URL } from '../utils/constants';
-import type { BuildingState, Rect, WindowSpec } from '../context/BuildingContext';
+import type { BuildingState, Rect, WindowSpec, SiteLocation } from '../context/BuildingContext';
 
 // ── Response shapes ──────────────────────────────────────────────────────────
 
@@ -12,6 +12,39 @@ export interface MaterialsCostBreakdown {
   steel: number;
   glass: number;
   total: number;
+  /** "kpwd_sr" (Schedule of Rates bill of quantities), "ml_model" or "formula" */
+  source?: string;
+}
+
+/** One priced line of the KPWD Schedule of Rates bill of quantities. */
+export interface BOQLine {
+  key: string;
+  label: string;
+  category: 'material' | 'labour' | 'add_on' | 'fitting' | 'regional' | 'tax';
+  qty: number;
+  unit: string;
+  rate: number;
+  amount: number;
+  ref: string;
+  page: string;
+  /** verified = checked against KPWD Vol 2; placeholder = awaiting a Vol 1 / quarterly rate */
+  status: 'verified' | 'placeholder' | 'interim' | 'derived';
+}
+
+export interface BOQBreakdown {
+  district_id: string;
+  plinth_area_m2: number;
+  floors: number;
+  relation_set: 'single' | 'double' | 'none';
+  approximate: boolean;
+  lines: BOQLine[];
+  subtotal: number;
+  regional_pct: number;
+  regional_status: string;
+  include_gst: boolean;
+  total: number;
+  placeholders_used: number;
+  notes: string[];
 }
 
 export interface HistoryEntry {
@@ -36,6 +69,8 @@ export interface ChatResponse {
   animationHint: AnimationHint | null;
   costBreakdown: MaterialsCostBreakdown | null;
   structuralRisk: number | null;
+  /** Something only the browser can do, e.g. "request_geolocation" */
+  clientAction?: string | null;
 }
 
 export interface ModelInfo {
@@ -194,4 +229,40 @@ export async function addRoomsBatch(
     method: 'POST',
     body: JSON.stringify({ floor_number: floorNumber, rooms, arrange }),
   });
+}
+
+// ── Site location & KPWD Schedule of Rates costing ───────────────────────────
+
+/** Set where the building is from coordinates (GPS / map) or a place name. */
+export async function setLocation(
+  loc: { lat: number; lng: number; source: SiteLocation['source'] } | { query: string },
+): Promise<ChatResponse> {
+  return request<ChatResponse>('/api/location', { method: 'POST', body: JSON.stringify(loc) });
+}
+
+/** Ask the browser for the user's position (needs their permission). */
+export function getBrowserPosition(): Promise<{ lat: number; lng: number }> {
+  return new Promise((resolve, reject) => {
+    if (!navigator.geolocation) {
+      reject(new Error('This browser does not support location. Type a place instead, e.g. "build it in Mysuru".'));
+      return;
+    }
+    navigator.geolocation.getCurrentPosition(
+      pos => resolve({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
+      err => reject(new Error(err.code === err.PERMISSION_DENIED
+        ? 'Location access was blocked. Type a place instead, e.g. "build it in Mysuru".'
+        : 'Could not get your location. Type a place instead, e.g. "build it in Mysuru".')),
+      { enableHighAccuracy: false, timeout: 10_000, maximumAge: 300_000 },
+    );
+  });
+}
+
+/** The building priced line by line from the KPWD Schedule of Rates. */
+export async function getBoq(): Promise<BOQBreakdown> {
+  return request<BOQBreakdown>('/api/estimate/boq');
+}
+
+/** Include or exclude 18% GST (KPWD rates exclude it). */
+export async function setIncludeGst(include: boolean): Promise<BuildingState> {
+  return request<BuildingState>('/api/estimate/gst', { method: 'PUT', body: JSON.stringify({ include }) });
 }

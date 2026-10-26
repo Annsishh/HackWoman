@@ -5,6 +5,10 @@ venv/
 .venv/
 *.egg-info/
 .pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
 
 # Secrets — keep the *.example templates
 .env
@@ -21,6 +25,9 @@ viteapp/.env.local
 # Node / build output
 node_modules/
 dist/
+*.tsbuildinfo
+.vite/
+coverage/
 
 # Logs
 *.log
@@ -42,3 +49,11 @@ skills-lock.json
 # Saved building state (backend/state/store.py)
 backend/state/building_state.json
 backend/state/building_state.tmp
+
+# KPWD Schedule of Rates source PDF (4 MB, public download) — the parsed JSON
+# in backend/data/sor/ is committed; regenerate it with backend/scripts/parse_kpwd_sor.py
+backend/data/sor/*.pdf
+
+# Throwaway debug pages for rendering components outside the app
+viteapp/debug-*.html
+viteapp/src/__debug_*

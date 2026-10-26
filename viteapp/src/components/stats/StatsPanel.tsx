@@ -2,12 +2,8 @@ import { TrendingUp, TrendingDown } from 'lucide-react';
 import { useBuilding } from '../../context/BuildingContext';
 import { formatCurrency, formatPercent, buildingHealthScore } from '../../utils/formatters';
 import { LiveConditions } from './LiveConditions';
-
-const COST_CATEGORIES = [
-  { label: 'STRUCTURAL', color: '#ef4444', key: 'structural' as const },
-  { label: 'MECHANICAL', color: '#06b6d4', key: 'mechanical' as const },
-  { label: 'FINISHES',   color: '#10b981', key: 'finishes' as const },
-];
+import { SiteCard } from './SiteCard';
+import { BoqCard } from './BoqCard';
 
 function DonutChart({ segments }: { segments: { color: string; pct: number }[] }) {
   const R = 56;
@@ -54,11 +50,6 @@ export function StatsPanel() {
   const totalAreaSqFt = floors.reduce((s, f) => s + f.area_sqft, 0);
   const healthScore = buildingHealthScore(floors);
   const budgetUsedPct = formatPercent(budget.used, budget.total);
-
-  /* ── Cost breakdown (derived) ── */
-  const costSplit = budget.used > 0
-    ? { structural: 45, mechanical: 32, finishes: 23 }
-    : { structural: 0, mechanical: 0, finishes: 0 };
 
   /* ── Area donut segments (equal per floor, up to 6 colors) ── */
   const areaSegments = totalFloors === 0
@@ -162,6 +153,11 @@ export function StatsPanel() {
 
         <Divider />
 
+        {/* ── Site location ── */}
+        <SiteCard />
+
+        <Divider />
+
         {/* ── Live site conditions ── */}
         <LiveConditions />
 
@@ -212,34 +208,8 @@ export function StatsPanel() {
 
         <Divider />
 
-        {/* ── Cost breakdown ── */}
-        <div>
-          <div style={{ fontSize: '0.6rem', fontWeight: 700, letterSpacing: '0.12em', color: 'var(--text-tertiary)', marginBottom: '0.75rem' }}>
-            COST BREAKDOWN
-          </div>
-          {COST_CATEGORIES.map(cat => (
-            <div key={cat.key} style={{ marginBottom: '0.5rem' }}>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.2rem' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.65rem', color: 'var(--text-secondary)' }}>
-                  <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: cat.color }} />
-                  {cat.label}
-                </div>
-                <span style={{ fontSize: '0.65rem', fontWeight: 700, color: 'var(--text-primary)' }}>
-                  {costSplit[cat.key]}%
-                </span>
-              </div>
-              <div style={{ height: '3px', background: 'rgba(255,255,255,0.05)', borderRadius: '2px', overflow: 'hidden' }}>
-                <div style={{
-                  height: '100%',
-                  width: budget.used > 0 ? `${costSplit[cat.key]}%` : '0%',
-                  background: cat.color,
-                  borderRadius: '2px',
-                  transition: 'width 0.6s ease',
-                }} />
-              </div>
-            </div>
-          ))}
-        </div>
+        {/* ── Cost breakdown: KPWD Schedule of Rates bill of quantities ── */}
+        <BoqCard />
 
         <Divider />
 
