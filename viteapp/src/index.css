@@ -1,0 +1,191 @@
+:root {
+  /* Color Tokens */
+  --bg-primary:       #0a0a0f;
+  --bg-secondary:     #12121a;
+  --bg-tertiary:      #1a1a2e;
+  --bg-elevated:      #16213e;
+
+  --accent-primary:   #7c3aed;
+  --accent-secondary: #06b6d4;
+  --accent-success:   #10b981;
+  --accent-warning:   #f59e0b;
+  --accent-danger:    #ef4444;
+
+  --text-primary:     #f1f5f9;
+  --text-secondary:   #94a3b8;
+  --text-tertiary:    #64748b;
+
+  --border-subtle:    rgba(255, 255, 255, 0.06);
+  --border-accent:    rgba(124, 58, 237, 0.3);
+
+  --glass-bg:         rgba(255, 255, 255, 0.03);
+  --glass-border:     rgba(255, 255, 255, 0.08);
+  --glass-shadow:     0 8px 32px rgba(0, 0, 0, 0.4);
+
+  /* Floor accent colors */
+  --floor-1: #7c3aed;
+  --floor-2: #06b6d4;
+  --floor-3: #10b981;
+  --floor-4: #f59e0b;
+  --floor-5: #ef4444;
+  --floor-6: #ec4899;
+  --floor-7: #8b5cf6;
+  --floor-8: #14b8a6;
+  --floor-9: #f97316;
+  --floor-10: #6366f1;
+
+  font-family: 'Inter', system-ui, Avenir, Helvetica, Arial, sans-serif;
+  line-height: 1.5;
+  font-weight: 400;
+
+  color-scheme: dark;
+  color: var(--text-primary);
+  background-color: var(--bg-primary);
+
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* ── Light mode overrides ── */
+[data-theme="light"] {
+  --bg-primary:    #f1f5f9;
+  --bg-secondary:  #e8eef5;
+  --bg-tertiary:   #dde5f0;
+  --bg-elevated:   #ffffff;
+
+  --text-primary:   #0f172a;
+  --text-secondary: #475569;
+  --text-tertiary:  #94a3b8;
+
+  --border-subtle:  rgba(0, 0, 0, 0.08);
+  --border-accent:  rgba(124, 58, 237, 0.3);
+  --border-color:   rgba(0, 0, 0, 0.15);
+
+  --glass-bg:     rgba(255, 255, 255, 0.75);
+  --glass-border: rgba(0, 0, 0, 0.1);
+  --glass-shadow: 0 8px 32px rgba(0, 0, 0, 0.12);
+
+  color-scheme: light;
+  color: var(--text-primary);
+  background-color: var(--bg-primary);
+}
+
+[data-theme="light"] body {
+  background-color: var(--bg-primary);
+}
+
+[data-theme="light"] button:hover {
+  background-color: var(--bg-tertiary);
+}
+
+[data-theme="light"] ::-webkit-scrollbar-track { background: var(--bg-secondary); }
+[data-theme="light"] ::-webkit-scrollbar-thumb { background: var(--bg-tertiary); }
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  margin: 0;
+  display: flex;
+  place-items: center;
+  min-width: 320px;
+  min-height: 100vh;
+  background-color: var(--bg-primary);
+  color: var(--text-primary);
+}
+
+h1, h2, h3, h4, h5, h6 {
+  color: var(--text-primary);
+  margin-bottom: 0.5rem;
+}
+
+a {
+  font-weight: 500;
+  color: var(--accent-primary);
+  text-decoration: inherit;
+}
+a:hover {
+  color: var(--accent-secondary);
+}
+
+button {
+  border-radius: 8px;
+  border: 1px solid transparent;
+  padding: 0.6em 1.2em;
+  font-size: 1em;
+  font-weight: 500;
+  font-family: inherit;
+  background-color: var(--bg-elevated);
+  color: var(--text-primary);
+  cursor: pointer;
+  transition: border-color 0.25s, transform 0.2s, background-color 0.2s;
+}
+button:hover {
+  border-color: var(--accent-primary);
+  background-color: var(--bg-tertiary);
+  transform: translateY(-1px);
+}
+button:active {
+  transform: translateY(0);
+}
+button:focus,
+button:focus-visible {
+  outline: 4px auto -webkit-focus-ring-color;
+}
+
+#root {
+  width: 100%;
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+/* ── Typing indicator dots ── */
+.typing-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #06b6d4;
+  animation: typingPulse 0.8s ease-in-out infinite alternate;
+}
+
+@keyframes typingPulse {
+  from { opacity: 0.3; transform: scale(0.8); }
+  to   { opacity: 1;   transform: scale(1.1); }
+}
+
+/* ── Floor card hover lift ── */
+.floor-card-3d:hover {
+  filter: brightness(1.15);
+}
+
+/* ── Fade in animation ── */
+@keyframes fadeInUp {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.fade-in-up {
+  animation: fadeInUp 0.3s ease both;
+}
+
+/* ── Scrollbar styling ── */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+::-webkit-scrollbar-track {
+  background: var(--bg-primary); 
+}
+::-webkit-scrollbar-thumb {
+  background: var(--bg-elevated); 
+  border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--text-tertiary); 
+}
