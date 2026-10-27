@@ -29,10 +29,10 @@ function AppShell() {
     return (
       <div style={{ position: 'fixed', inset: 0, background: 'var(--bg-primary)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column', gap: '1rem' }}>
         <div style={{ fontSize: '1.2rem', fontWeight: 800, letterSpacing: '0.06em', color: 'var(--text-primary)' }}>
-          निर्माण <span style={{ color: '#06b6d4' }}>AI</span>
+          निर्माण <span style={{ color: '#4f7d78' }}>AI</span>
         </div>
         <div style={{ width: '120px', height: '2px', background: 'var(--border-subtle)', borderRadius: '1px', overflow: 'hidden' }}>
-          <div style={{ height: '100%', background: 'linear-gradient(90deg,#7c3aed,#06b6d4)', animation: 'slide 1.2s ease-in-out infinite', borderRadius: '1px' }} />
+          <div style={{ height: '100%', background: 'linear-gradient(90deg, #7d8aa3, #8fa9a2)', animation: 'slide 1.2s ease-in-out infinite', borderRadius: '1px' }} />
         </div>
         <style>{`@keyframes slide{0%{width:0%;margin-left:0}50%{width:80%;margin-left:10%}100%{width:0%;margin-left:100%}}`}</style>
       </div>

@@ -4,7 +4,7 @@
   left: 0;
   width: 100vw;
   height: 100vh;
-  background: rgba(0, 0, 0, 0.6);
+  background: rgba(60, 52, 44, 0.21);
   backdrop-filter: blur(8px);
   display: flex;
   justify-content: center;
@@ -21,8 +21,8 @@
   max-width: 560px;
   max-height: 92vh;
   overflow-y: auto;
-  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.4);
-  color: #fff;
+  box-shadow: 0 12px 32px rgba(60, 52, 44, 0.14);
+  color: var(--text-primary);
   text-align: center;
 }
 
@@ -30,7 +30,7 @@
   font-size: 1.8rem;
   margin-bottom: 0.5rem;
   font-weight: 600;
-  background: linear-gradient(135deg, #a8c0ff 0%, #3f2b96 100%);
+  background: linear-gradient(135deg, #2b2926 0%, #2b2926 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
 }
@@ -60,23 +60,23 @@
   width: 100%;
   box-sizing: border-box;
   padding: 0.8rem 1rem;
-  background: rgba(255, 255, 255, 0.05);
+  background: rgba(60, 52, 44, 0.06);
   border: 1px solid var(--border-color);
   border-radius: 8px;
-  color: #fff;
+  color: var(--text-primary);
   font-size: 1.1rem;
   transition: all 0.2s ease;
 }
 
 .setup-input:focus {
   outline: none;
-  border-color: #3f2b96;
-  background: rgba(255, 255, 255, 0.1);
-  box-shadow: 0 0 0 3px rgba(63, 43, 150, 0.2);
+  border-color: #5d6b80;
+  background: rgba(60, 52, 44, 0.12);
+  box-shadow: 0 0 0 3px rgba(93, 107, 128, 0.25);
 }
 
 .setup-button {
-  background: linear-gradient(135deg, #a8c0ff 0%, #3f2b96 100%);
+  background: #5d6b80;
   color: #fff;
   border: none;
   border-radius: 8px;
@@ -114,13 +114,13 @@ select.setup-input {
 }
 
 select.setup-input option {
-  background-color: #1a1a2e;
-  color: #ffffff;
+  background-color: #ffffff;
+  color: var(--text-primary);
   padding: 12px;
   font-size: 1rem;
 }
 
 select.setup-input option:checked {
-  background-color: #3f2b96;
+  background-color: #5d6b80;
   color: #ffffff;
 }

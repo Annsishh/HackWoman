@@ -9,8 +9,8 @@ import { fitSizes, minSqft, type Preset, type PresetRoom } from '../../utils/pre
 const NEW_FLOOR = -1;
 
 const FIELD: React.CSSProperties = {
-  boxSizing: 'border-box', padding: '0.4rem 0.5rem', background: 'rgba(255,255,255,0.06)',
-  border: '1px solid var(--border-subtle)', borderRadius: '7px', color: '#f1f5f9', fontSize: '0.8rem',
+  boxSizing: 'border-box', padding: '0.4rem 0.5rem', background: 'rgba(60,52,44,0.072)',
+  border: '1px solid var(--border-subtle)', borderRadius: '7px', color: '#2b2926', fontSize: '0.8rem',
 };
 
 /**
@@ -89,15 +89,15 @@ function PresetForm({ preset }: { preset: Preset }) {
   };
 
   return (
-    <div onClick={close} style={{ position: 'fixed', inset: 0, zIndex: 950, background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(6px)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+    <div onClick={close} style={{ position: 'fixed', inset: 0, zIndex: 950, background: 'rgba(60,52,44,0.21)', backdropFilter: 'blur(6px)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
       <div onClick={e => e.stopPropagation()} style={{
-        width: 'min(560px, 94vw)', maxHeight: '90vh', overflowY: 'auto', background: '#0d0d14',
-        border: '1px solid var(--border-subtle)', borderRadius: '14px', padding: '1.1rem 1.2rem', boxShadow: '0 20px 60px rgba(0,0,0,0.5)',
+        width: 'min(560px, 94vw)', maxHeight: '90vh', overflowY: 'auto', background: '#fbfaf7',
+        border: '1px solid var(--border-subtle)', borderRadius: '14px', padding: '1.1rem 1.2rem', boxShadow: '0 20px 60px rgba(60,52,44,0.175)',
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
           <span style={{ fontSize: '1.4rem' }}>{preset.emoji}</span>
           <div>
-            <div style={{ fontSize: '1rem', fontWeight: 800, color: '#f1f5f9' }}>Add a {preset.label}</div>
+            <div style={{ fontSize: '1rem', fontWeight: 800, color: '#2b2926' }}>Add a {preset.label}</div>
             <div style={{ fontSize: '0.7rem', color: 'var(--text-tertiary)' }}>{preset.desc}</div>
           </div>
           <button onClick={close} style={{ marginLeft: 'auto', background: 'none', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer' }}><X size={18} /></button>
@@ -123,7 +123,7 @@ function PresetForm({ preset }: { preset: Preset }) {
         <div style={{ marginTop: '1rem' }}>
           <div style={{ display: 'flex', fontSize: '0.62rem', fontWeight: 700, letterSpacing: '0.1em', color: 'var(--text-tertiary)', marginBottom: '0.35rem' }}>
             2 · ROOM SIZES (SUGGESTED — EDIT ANY)
-            <span style={{ marginLeft: 'auto', color: total > free ? '#f87171' : '#34d399', letterSpacing: 0 }}>{total} / {free} sq ft</span>
+            <span style={{ marginLeft: 'auto', color: total > free ? '#9a5040' : '#4c6b49', letterSpacing: 0 }}>{total} / {free} sq ft</span>
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.3rem' }}>
             {rooms.map((r, i) => {
@@ -146,8 +146,8 @@ function PresetForm({ preset }: { preset: Preset }) {
           </div>
           <select value="" onChange={e => { if (e.target.value) { setRooms(rs => [...rs, { type: e.target.value }]); setEdited({}); } }}
             style={{ ...FIELD, marginTop: '0.4rem', width: '100%', cursor: 'pointer' }}>
-            <option value="" style={{ background: '#1a1a2e' }}>+ Add another room…</option>
-            {Object.keys(ROOM_META).map(t => <option key={t} value={t} style={{ background: '#1a1a2e' }}>{ROOM_META[t].symbol} {t}</option>)}
+            <option value="" style={{ background: '#efebe4' }}>+ Add another room…</option>
+            {Object.keys(ROOM_META).map(t => <option key={t} value={t} style={{ background: '#efebe4' }}>{ROOM_META[t].symbol} {t}</option>)}
           </select>
           <div style={{ fontSize: '0.64rem', color: 'var(--text-tertiary)', marginTop: '0.4rem', lineHeight: 1.5 }}>
             Suggestions use typical Indian sizes (master bedroom 160, bedroom 140, hall 200, kitchen 90, bathroom 45 sq ft),
@@ -156,7 +156,7 @@ function PresetForm({ preset }: { preset: Preset }) {
         </div>
 
         {(error || failure) && (
-          <div style={{ marginTop: '0.75rem', fontSize: '0.72rem', color: '#f87171', background: 'rgba(248,113,113,0.08)', borderRadius: '8px', padding: '0.5rem 0.6rem' }}>{failure ?? error}</div>
+          <div style={{ marginTop: '0.75rem', fontSize: '0.72rem', color: '#9a5040', background: 'rgba(154,80,64,0.08)', borderRadius: '8px', padding: '0.5rem 0.6rem' }}>{failure ?? error}</div>
         )}
 
         {/* 3. How to place */}
@@ -176,10 +176,10 @@ function FloorChip({ active, onClick, label, sub }: { active: boolean; onClick: 
   return (
     <button onClick={onClick} style={{
       padding: '0.4rem 0.7rem', borderRadius: '8px', cursor: 'pointer', textAlign: 'left',
-      background: active ? 'rgba(124,58,237,0.25)' : 'rgba(255,255,255,0.04)',
-      border: `1px solid ${active ? '#7c3aed' : 'var(--border-subtle)'}`,
+      background: active ? 'rgba(110,104,144,0.25)' : 'rgba(60,52,44,0.048)',
+      border: `1px solid ${active ? '#6e6890' : 'var(--border-subtle)'}`,
     }}>
-      <div style={{ fontSize: '0.76rem', fontWeight: 700, color: active ? '#e9d5ff' : 'var(--text-secondary)' }}>{label}</div>
+      <div style={{ fontSize: '0.76rem', fontWeight: 700, color: active ? '#4f4a6e' : 'var(--text-secondary)' }}>{label}</div>
       <div style={{ fontSize: '0.6rem', color: 'var(--text-tertiary)' }}>{sub}</div>
     </button>
   );
@@ -191,8 +191,8 @@ function BigBtn({ disabled, primary, onClick, icon, title, sub }: {
   return (
     <button disabled={disabled} onClick={onClick} style={{
       padding: '0.65rem', borderRadius: '10px', textAlign: 'left', cursor: disabled ? 'not-allowed' : 'pointer', opacity: disabled ? 0.45 : 1,
-      background: primary ? 'linear-gradient(135deg,#7c3aed,#06b6d4)' : 'rgba(255,255,255,0.05)',
-      border: primary ? 'none' : '1px solid var(--border-subtle)', color: '#fff',
+      background: primary ? '#5d6b80' : 'rgba(60,52,44,0.06)',
+      border: primary ? 'none' : '1px solid var(--border-subtle)', color: primary ? '#fff' : 'var(--text-primary)',
     }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.8rem', fontWeight: 800 }}>{icon}{title}</div>
       <div style={{ fontSize: '0.64rem', opacity: 0.8, marginTop: '0.15rem' }}>{sub}</div>

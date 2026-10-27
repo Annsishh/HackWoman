@@ -19,10 +19,10 @@ const WALLS: Record<LifecycleOptions['wall_material'], string> = {
 
 const label: React.CSSProperties = { fontSize: '0.6rem', fontWeight: 700, letterSpacing: '0.1em', color: 'var(--text-tertiary)' };
 const input: React.CSSProperties = {
-  width: '100%', boxSizing: 'border-box', padding: '0.4rem 0.5rem', background: 'rgba(255,255,255,0.04)',
-  border: '1px solid var(--border-subtle)', borderRadius: '7px', color: '#f1f5f9', fontSize: '0.74rem', fontFamily: 'inherit',
+  width: '100%', boxSizing: 'border-box', padding: '0.4rem 0.5rem', background: 'rgba(60,52,44,0.048)',
+  border: '1px solid var(--border-subtle)', borderRadius: '7px', color: '#2b2926', fontSize: '0.74rem', fontFamily: 'inherit',
 };
-const card: React.CSSProperties = { background: 'rgba(255,255,255,0.02)', border: '1px solid var(--border-subtle)', borderRadius: '12px', padding: '0.9rem 1rem' };
+const card: React.CSSProperties = { background: 'rgba(60,52,44,0.024)', border: '1px solid var(--border-subtle)', borderRadius: '12px', padding: '0.9rem 1rem' };
 
 function Field({ name, children }: { name: string; children: ReactNode }) {
   return <label style={{ display: 'flex', flexDirection: 'column', gap: '0.2rem', fontSize: '0.66rem', color: 'var(--text-secondary)' }}>{name}{children}</label>;
@@ -43,7 +43,7 @@ const Src = ({ children }: { children: ReactNode }) => (
   <div style={{ fontSize: '0.6rem', color: 'var(--text-tertiary)', marginTop: '0.15rem', lineHeight: 1.45 }}>{children}</div>
 );
 
-function Stat({ name, value, sub, tone = '#f1f5f9' }: { name: string; value: string; sub?: string; tone?: string }) {
+function Stat({ name, value, sub, tone = '#2b2926' }: { name: string; value: string; sub?: string; tone?: string }) {
   return (
     <div style={{ ...card, padding: '0.7rem 0.8rem' }}>
       <div style={label}>{name}</div>
@@ -129,24 +129,24 @@ function Report({ r }: { r: LifecycleReport }) {
     <div style={{ display: 'flex', flexDirection: 'column', gap: '0.9rem' }}>
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(170px, 1fr))', gap: '0.6rem' }}>
         <Stat name="TO BUILD (KPWD SR)" value={formatCurrency(r.initial_cost)} sub="bill of quantities, as on the Home page" />
-        <Stat name={`MAINTENANCE · ${s.horizon_years} YRS`} value={formatCurrency(longTerm)} tone="#f59e0b"
+        <Stat name={`MAINTENANCE · ${s.horizon_years} YRS`} value={formatCurrency(longTerm)} tone="#a57c3a"
           sub={`priced items only${r.options.discount_pct ? ` · present value ${formatCurrency(s.maintenance_priced_pv)}` : ''}`} />
-        <Stat name="CPWD YARDSTICK" value={formatCurrency(m.yardstick.total)} tone="#a78bfa" sub="benchmark: repairs + electrical, 2019 Delhi rates" />
-        <Stat name="RETV (ENS 2018)" value={e.retv === null ? '—' : `${e.retv} W/m²`} tone={e.retv === null ? '#64748b' : e.retv_ok ? '#10b981' : '#ef4444'}
+        <Stat name="CPWD YARDSTICK" value={formatCurrency(m.yardstick.total)} tone="#5f5a80" sub="benchmark: repairs + electrical, 2019 Delhi rates" />
+        <Stat name="RETV (ENS 2018)" value={e.retv === null ? '—' : `${e.retv} W/m²`} tone={e.retv === null ? '#8f897f' : e.retv_ok ? '#5c7d59' : '#b0604f'}
           sub={e.retv === null ? 'not calculated' : `limit ${e.retv_max} · lower is cooler`} />
-        <Stat name="ROOF U-VALUE" value={`${e.u_roof} W/m²K`} tone={e.roof_ok ? '#10b981' : '#ef4444'} sub={`ENS limit ${e.u_roof_max}`} />
-        <Stat name="RAINWATER / YEAR" value={w.harvest ? `${Math.round(w.harvest.annual_litres / 1000)} kL` : '—'} tone="#06b6d4"
+        <Stat name="ROOF U-VALUE" value={`${e.u_roof} W/m²K`} tone={e.roof_ok ? '#5c7d59' : '#b0604f'} sub={`ENS limit ${e.u_roof_max}`} />
+        <Stat name="RAINWATER / YEAR" value={w.harvest ? `${Math.round(w.harvest.annual_litres / 1000)} kL` : '—'} tone="#4f7d78"
           sub={w.harvest ? `${w.harvest.rain_mm} mm measured rain` : 'rainfall unavailable'} />
       </div>
 
       {r.missing.length > 0 && (
-        <div style={{ ...card, borderColor: 'rgba(245,158,11,0.35)', background: 'rgba(245,158,11,0.05)' }}>
-          <div style={{ ...label, color: '#f59e0b', marginBottom: '0.35rem' }}>MISSING INFORMATION</div>
+        <div style={{ ...card, borderColor: 'rgba(165,124,58,0.35)', background: 'rgba(165,124,58,0.05)' }}>
+          <div style={{ ...label, color: '#a57c3a', marginBottom: '0.35rem' }}>MISSING INFORMATION</div>
           {r.missing.map(x => <div key={x} style={{ fontSize: '0.72rem', color: 'var(--text-secondary)' }}>• {x}</div>)}
         </div>
       )}
 
-      <Section icon={<Wrench size={15} color="#f59e0b" />} title="Maintenance — priced (CPWD periodicity × quantity × KPWD rate)">
+      <Section icon={<Wrench size={15} color="#a57c3a" />} title="Maintenance — priced (CPWD periodicity × quantity × KPWD rate)">
         <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.7rem' }}>
           <thead><tr style={{ ...label, textAlign: 'left' }}>
             {['TASK', 'EVERY', 'QUANTITY', 'RATE', 'PER TIME', 'TIMES', 'TOTAL'].map(h => <th key={h} style={{ padding: '0.3rem', borderBottom: '1px solid var(--border-subtle)' }}>{h}</th>)}
@@ -170,7 +170,7 @@ function Report({ r }: { r: LifecycleReport }) {
       </Section>
 
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.9rem' }}>
-        <Section icon={<CalendarClock size={15} color="#06b6d4" />} title="Schedule — recurring work without a price">
+        <Section icon={<CalendarClock size={15} color="#4f7d78" />} title="Schedule — recurring work without a price">
           {m.unpriced.map(u => (
             <div key={u.task} style={{ fontSize: '0.7rem', marginBottom: '0.45rem' }}>
               <b>{u.task}</b> — every {u.every_years < 1 ? `${u.every_years * 12} months` : `${u.every_years} yr`}
@@ -181,7 +181,7 @@ function Report({ r }: { r: LifecycleReport }) {
           {m.inspections.map(i => <div key={i.text} style={{ fontSize: '0.68rem', color: 'var(--text-secondary)', marginBottom: '0.2rem' }}>• {i.text}</div>)}
           <Src>{m.inspections[0]?.source}</Src>
         </Section>
-        <Section icon={<Layers size={15} color="#a78bfa" />} title="Service life and replacements">
+        <Section icon={<Layers size={15} color="#5f5a80" />} title="Service life and replacements">
           {m.replacements.map(c => (
             <div key={c.component} style={{ fontSize: '0.7rem', marginBottom: '0.45rem' }}>
               <b>{c.component}</b> — {c.life_years} yr life · {c.replacements_in_horizon ? `replace ${c.replacements_in_horizon}× (year ${c.due_years.join(', ')})` : 'no replacement within the horizon'}
@@ -190,13 +190,13 @@ function Report({ r }: { r: LifecycleReport }) {
           ))}
           <div style={{ fontSize: '0.7rem', marginTop: '0.5rem' }}>
             <b>Whole building</b> — {r.building_life.years} yr expected economic life ({r.building_life.structure === 'rcc_framed' ? 'RCC framed' : 'load bearing'})
-            {r.building_life.warning && <div style={{ color: '#f59e0b' }}>{r.building_life.warning}</div>}
+            {r.building_life.warning && <div style={{ color: '#a57c3a' }}>{r.building_life.warning}</div>}
             <Src>{r.building_life.source}. {r.building_life.note}</Src>
           </div>
         </Section>
       </div>
 
-      <Section icon={<Thermometer size={15} color="#ef4444" />} title={`Envelope and thermal comfort — Eco-Niwas Samhita 2018 · ${e.climate_zone ?? 'climate unknown'} climate (measured)`}>
+      <Section icon={<Thermometer size={15} color="#b0604f" />} title={`Envelope and thermal comfort — Eco-Niwas Samhita 2018 · ${e.climate_zone ?? 'climate unknown'} climate (measured)`}>
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.9rem', fontSize: '0.7rem' }}>
           <div>
             <div style={label}>WALL U = {e.u_wall} W/m²K</div>
@@ -216,7 +216,7 @@ function Report({ r }: { r: LifecycleReport }) {
             <div style={{ marginTop: '0.5rem' }}>
               {e.retv !== null
                 ? <>RETV <b>{e.retv} W/m²</b> — {e.retv_ok ? 'within' : 'above'} the {e.retv_max} W/m² limit (a {e.coefficients?.a}, b {e.coefficients?.b}, c {e.coefficients?.c}).<Src>{e.retv_source}</Src></>
-                : <span style={{ color: '#f59e0b' }}>{e.retv_note}</span>}
+                : <span style={{ color: '#a57c3a' }}>{e.retv_note}</span>}
             </div>
             <div style={{ marginTop: '0.4rem' }}>Glass: U {e.glass.u}, SHGC {e.glass.shgc}<Src>{e.glass.source}</Src></div>
             <div style={{ marginTop: '0.4rem' }}>Window-to-floor {e.window_to_floor_pct ?? '—'} %<Src>{e.wfr_note}</Src></div>
@@ -228,12 +228,12 @@ function Report({ r }: { r: LifecycleReport }) {
       </Section>
 
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.9rem' }}>
-        <Section icon={<Droplets size={15} color="#06b6d4" />} title="Water">
+        <Section icon={<Droplets size={15} color="#4f7d78" />} title="Water">
           <div style={{ fontSize: '0.7rem', display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
             {w.harvest
               ? <div>Rooftop harvest: <b>{w.harvest.annual_litres.toLocaleString()} L/year</b> = {w.harvest.rain_mm} mm × {w.harvest.roof_m2} m² × {w.harvest.runoff_coefficient}
                   <Src>{w.harvest.source}. Rain: {w.harvest.rain_source}.</Src></div>
-              : <div style={{ color: '#f59e0b' }}>Rainfall for the site couldn't be measured.</div>}
+              : <div style={{ color: '#a57c3a' }}>Rainfall for the site couldn't be measured.</div>}
             {w.demand_litres_per_day
               ? <div>Demand: <b>{w.demand_litres_per_day[0].toLocaleString()}–{w.demand_litres_per_day[1].toLocaleString()} L/day</b>; flushing {w.flushing_litres_per_year?.toLocaleString()} L/year
                   {w.harvest_share_of_flushing_pct !== undefined && <> — harvested rain could cover about <b>{w.harvest_share_of_flushing_pct} %</b> of flushing.</>}
@@ -241,11 +241,11 @@ function Report({ r }: { r: LifecycleReport }) {
               : <div style={{ color: 'var(--text-tertiary)' }}>Enter occupants and the town population band for the demand (IS 1172: {w.per_capita.over_100k.lphd.join('–')} L/head/day over 1 lakh, {w.per_capita['20k_100k'].lphd.join('–')} for 20,000–1 lakh).</div>}
           </div>
         </Section>
-        <Section icon={<Layers size={15} color="#10b981" />} title="Adaptability and durability">
+        <Section icon={<Layers size={15} color="#5c7d59" />} title="Adaptability and durability">
           {r.adaptability.map(a => (
             <div key={a.topic} style={{ fontSize: '0.7rem', marginBottom: '0.4rem' }}><b>{a.topic}</b> — <span style={{ color: 'var(--text-secondary)' }}>{a.detail}</span></div>
           ))}
-          {m.coastal && <div style={{ fontSize: '0.7rem', color: '#f59e0b' }}>Coastal district: CPWD gives conduit wiring a shorter life here (15 vs 20 years).</div>}
+          {m.coastal && <div style={{ fontSize: '0.7rem', color: '#a57c3a' }}>Coastal district: CPWD gives conduit wiring a shorter life here (15 vs 20 years).</div>}
         </Section>
       </div>
     </div>
@@ -278,8 +278,8 @@ function Comparison({ alts, onRemove }: { alts: LifecycleAlternative[]; onRemove
   }, [key]);
   if (!alts.length) return null;
   return (
-    <Section icon={<Layers size={15} color="#a78bfa" />} title={`Design alternatives over ${alts[0].options.horizon_years} years`}>
-      {err && <div style={{ color: '#ef4444', fontSize: '0.72rem' }}>{err}</div>}
+    <Section icon={<Layers size={15} color="#5f5a80" />} title={`Design alternatives over ${alts[0].options.horizon_years} years`}>
+      {err && <div style={{ color: '#b0604f', fontSize: '0.72rem' }}>{err}</div>}
       <div style={{ overflowX: 'auto' }}>
         <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.7rem' }}>
           <thead><tr>
@@ -355,7 +355,7 @@ export function LifecyclePanel() {
 
   return (
     <div style={{ flex: 1, display: 'flex', overflow: 'hidden' }}>
-      <div style={{ width: '280px', flexShrink: 0, overflowY: 'auto', padding: '1rem', borderRight: '1px solid var(--border-subtle)', background: '#0d0d14',
+      <div style={{ width: '280px', flexShrink: 0, overflowY: 'auto', padding: '1rem', borderRight: '1px solid var(--border-subtle)', background: '#fbfaf7',
         display: 'flex', flexDirection: 'column', gap: '0.8rem' }}>
         <div>
           <div style={label}>DESIGN</div>
@@ -365,8 +365,8 @@ export function LifecyclePanel() {
                 title={w === 'draft' && !hasDraft ? 'Generate a design on the AI Generate tab first' : ''} style={{
                   flex: 1, padding: '0.4rem', borderRadius: '7px', fontSize: '0.68rem', fontWeight: 700,
                   cursor: w === 'draft' && !hasDraft ? 'not-allowed' : 'pointer', opacity: w === 'draft' && !hasDraft ? 0.45 : 1,
-                  background: design === w ? 'rgba(124,58,237,0.25)' : 'transparent',
-                  border: `1px solid ${design === w ? 'rgba(124,58,237,0.6)' : 'var(--border-subtle)'}`, color: '#f1f5f9',
+                  background: design === w ? 'rgba(110,104,144,0.25)' : 'transparent',
+                  border: `1px solid ${design === w ? 'rgba(110,104,144,0.6)' : 'var(--border-subtle)'}`, color: '#2b2926',
                 }}>{l}</button>
             ))}
           </div>
@@ -374,7 +374,7 @@ export function LifecyclePanel() {
         <Options opt={opt} set={setOpt} />
         <button onClick={addAlternative} disabled={!report || !!report.error || alts.length >= 6} style={{
           display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.35rem', padding: '0.55rem', borderRadius: '9px',
-          background: 'linear-gradient(135deg,#7c3aed,#06b6d4)', border: 'none', color: '#fff', fontWeight: 700, fontSize: '0.74rem', cursor: 'pointer',
+          background: '#5d6b80', border: 'none', color: '#fff', fontWeight: 700, fontSize: '0.74rem', cursor: 'pointer',
           opacity: !report || report.error ? 0.5 : 1,
         }}><Plus size={13} /> Add these choices to the comparison</button>
       </div>
@@ -389,7 +389,7 @@ export function LifecyclePanel() {
             <Loader2 size={13} style={{ animation: 'spin 1s linear infinite' }} /> Recalculating…</span>}
           <style>{'@keyframes spin { to { transform: rotate(360deg); } }'}</style>
         </div>
-        {error && <div style={{ ...card, color: '#fca5a5', fontSize: '0.75rem' }}><AlertTriangle size={13} /> {error}</div>}
+        {error && <div style={{ ...card, color: '#7f3f32', fontSize: '0.75rem' }}><AlertTriangle size={13} /> {error}</div>}
         {report?.error && <div style={{ ...card, color: 'var(--text-secondary)', fontSize: '0.8rem' }}>{report.error}</div>}
         {report && !report.error && <Report r={report} />}
         <Comparison alts={alts} onRemove={i => setAlts(alts.filter((_, j) => j !== i))} />
@@ -401,7 +401,7 @@ export function LifecyclePanel() {
             <div style={{ marginTop: '0.5rem', fontSize: '0.68rem', color: 'var(--text-secondary)', display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
               <div>{sources.note} Built {sources.generated} by backend/scripts/build_lifecycle_data.py.</div>
               {Object.entries(sources.sources).map(([k, s]) => (
-                <div key={k}><a href={s.url} target="_blank" rel="noreferrer" style={{ color: '#93c5fd' }}>{s.title}</a> — {s.publisher}
+                <div key={k}><a href={s.url} target="_blank" rel="noreferrer" style={{ color: '#46607f' }}>{s.title}</a> — {s.publisher}
                   <Src>retrieved {s.retrieved} · sha256 {s.sha256.slice(0, 16)}…</Src></div>
               ))}
             </div>

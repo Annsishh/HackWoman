@@ -6,11 +6,15 @@ Ensures the building obeys physics:
      floor directly below it.
   2. The ground floor must have >= rooms than every floor above it.
 
-These are hard geometric invariants and stay deterministic. The seismic
-demand of the building is computed separately, from IS 1893:2016, in
-services/seismic_analysis.py.
+These are hard geometric invariants and stay deterministic.
+structural_risk_score() below is a separate, additive ML signal from the
+trained risk model (model/train_risk_model.py); the code-based seismic
+demand is computed from IS 1893:2016 in services/seismic_analysis.py.
 """
+import statistics
+
 from models.building import BuildingState, ValidationResult
+from services.ml_loader import predict_risk
 
 
 def check_structural_integrity(proposed_state: BuildingState) -> ValidationResult:
@@ -128,3 +132,17 @@ def check_structural_integrity_for_action(
             )
 
     return ValidationResult(valid=True)
+
+
+def structural_risk_score(state: BuildingState) -> float | None:
+    """
+    Additive, non-blocking ML risk signal (0-1) estimating settlement/seismic
+    risk from seismic zone, soil type and load distribution. None if there are
+    no floors or the trained model isn't available (see model/README.md).
+    """
+    floors = state.floors
+    if not floors:
+        return None
+    room_counts = [len(f.rooms) for f in floors]
+    room_std = statistics.pstdev(room_counts) if len(room_counts) > 1 else 0.0
+    return predict_risk(len(floors), sum(room_counts), max(room_counts), room_std, state.constraints.district_id)

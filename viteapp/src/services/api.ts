@@ -363,6 +363,11 @@ export async function fetchSeismicAnalysis(opts: {
   return request<SeismicReport>(`/api/analysis/seismic?${params}`);
 }
 
+/** Advisory 0-1 score from the trained structural-risk model (null when there's nothing to score or no model). */
+export async function fetchStructuralRisk(): Promise<{ risk: number | null; model_loaded: boolean; district_id: string }> {
+  return request('/api/analysis/structural-risk');
+}
+
 /** IS 1893 base shear of the building as a fraction of its weight, and the code checks it fails. */
 export async function fetchSeismicDemand(): Promise<{ demand: number | null; zone: string | null; warnings: { rule: string; detail: string }[] }> {
   return request('/api/analysis/seismic-demand');

@@ -20,7 +20,7 @@ from models.building import (
     AnimationHint,
 )
 from services.intent_interpreter import interpret_command
-from services.structural_inspector import check_structural_integrity_for_action
+from services.structural_inspector import check_structural_integrity_for_action, structural_risk_score
 from services.seismic_analysis import seismic_demand, zone_at
 from services.site_profile import basic_wind_speed
 from services.compliance_service import check_compliance_for_action
@@ -198,6 +198,7 @@ async def process_message(message: str, state: BuildingState) -> ChatResponse:
         animationHint=animation,
         costBreakdown=cost_breakdown if cost_breakdown.total > 0 else None,
         seismicDemand=seismic_demand(new_state),
+        structuralRisk=structural_risk_score(new_state),
     )
 
 
@@ -264,6 +265,7 @@ async def set_location(params: dict, state: BuildingState, source: str | None = 
         suggestions=generate_suggestions(new_state)[:3],
         actionLog=log_entry,
         seismicDemand=seismic_demand(new_state),
+        structuralRisk=structural_risk_score(new_state),
     )
 
 

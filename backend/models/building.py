@@ -256,6 +256,8 @@ class ChatResponse(BaseModel):
     costBreakdown: Optional[MaterialsCostBreakdown] = None
     # Design base shear as a fraction of seismic weight, IS 1893:2016 (services/seismic_analysis.seismic_demand)
     seismicDemand: Optional[float] = None
+    # Advisory ML structural-risk score 0-1 (services/structural_inspector.structural_risk_score)
+    structuralRisk: Optional[float] = None
     # Something only the browser can do, e.g. "request_geolocation"
     clientAction: Optional[str] = None
 

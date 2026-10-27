@@ -4,12 +4,12 @@ import { getBoq, setIncludeGst, type BOQBreakdown, type BOQLine } from '../../se
 import { formatCurrency } from '../../utils/formatters';
 
 const CATEGORIES: { key: BOQLine['category']; label: string; color: string }[] = [
-  { key: 'material', label: 'Materials',            color: '#ef4444' },
-  { key: 'labour',   label: 'Labour',               color: '#06b6d4' },
-  { key: 'add_on',   label: 'Overhead & profit',    color: '#8b5cf6' },
-  { key: 'fitting',  label: 'Flooring & fittings',  color: '#10b981' },
-  { key: 'regional', label: 'Regional adjustment',  color: '#f59e0b' },
-  { key: 'tax',      label: 'GST',                  color: '#94a3b8' },
+  { key: 'material', label: 'Materials',            color: '#b0604f' },
+  { key: 'labour',   label: 'Labour',               color: '#4f7d78' },
+  { key: 'add_on',   label: 'Overhead & profit',    color: '#6e6890' },
+  { key: 'fitting',  label: 'Flooring & fittings',  color: '#5c7d59' },
+  { key: 'regional', label: 'Regional adjustment',  color: '#a57c3a' },
+  { key: 'tax',      label: 'GST',                  color: '#6b665e' },
 ];
 
 /** The building priced from the Karnataka PWD Schedule of Rates 2023-24, line by line. */
@@ -56,7 +56,7 @@ export function BoqCard() {
     <div>
       {header}
       <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between' }}>
-        <span style={{ fontSize: '1.15rem', fontWeight: 800, color: '#f1f5f9' }}>{formatCurrency(boq.total)}</span>
+        <span style={{ fontSize: '1.15rem', fontWeight: 800, color: '#2b2926' }}>{formatCurrency(boq.total)}</span>
         <span style={{ fontSize: '0.6rem', color: 'var(--text-tertiary)' }}>{boq.plinth_area_m2} m² plinth</span>
       </div>
 
@@ -67,9 +67,9 @@ export function BoqCard() {
           { label: 'Steel', value: `${(qty('steel_kg') / 1000).toFixed(1)} t` },
           { label: 'M-Sand', value: `${Math.round(qty('sand_m3'))} m³` },
         ].map(q => (
-          <div key={q.label} style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid var(--border-subtle)', borderRadius: '6px', padding: '0.3rem 0.4rem' }}>
+          <div key={q.label} style={{ background: 'rgba(60,52,44,0.036)', border: '1px solid var(--border-subtle)', borderRadius: '6px', padding: '0.3rem 0.4rem' }}>
             <div style={{ fontSize: '0.52rem', color: 'var(--text-tertiary)', letterSpacing: '0.06em' }}>{q.label.toUpperCase()}</div>
-            <div style={{ fontSize: '0.72rem', fontWeight: 700, color: '#f1f5f9' }}>{q.value}</div>
+            <div style={{ fontSize: '0.72rem', fontWeight: 700, color: '#2b2926' }}>{q.value}</div>
           </div>
         ))}
       </div>
@@ -84,7 +84,7 @@ export function BoqCard() {
               </span>
               <span style={{ color: 'var(--text-primary)', fontWeight: 700 }}>{formatCurrency(c.amount)} <span style={{ color: 'var(--text-tertiary)', fontWeight: 500 }}>{pct}%</span></span>
             </div>
-            <div style={{ height: '3px', background: 'rgba(255,255,255,0.05)', borderRadius: '2px', overflow: 'hidden' }}>
+            <div style={{ height: '3px', background: 'rgba(60,52,44,0.06)', borderRadius: '2px', overflow: 'hidden' }}>
               <div style={{ height: '100%', width: `${pct}%`, background: c.color, borderRadius: '2px', transition: 'width 0.6s ease' }} />
             </div>
           </div>
@@ -92,26 +92,26 @@ export function BoqCard() {
       })}
 
       {(boq.placeholders_used > 0 || boq.regional_status !== 'verified' || boq.approximate) && (
-        <div style={{ fontSize: '0.58rem', color: '#f59e0b', margin: '0.4rem 0', lineHeight: 1.4 }}>
+        <div style={{ fontSize: '0.58rem', color: '#a57c3a', margin: '0.4rem 0', lineHeight: 1.4 }}>
           {boq.placeholders_used > 0 && `${boq.placeholders_used} placeholder rates (cement, steel, sand, wages) pending KPWD Vol 1. `}
           {boq.approximate && 'Outside the range the CBRI relations cover — approximate.'}
         </div>
       )}
 
-      <button onClick={() => setOpen(o => !o)} style={{ background: 'none', border: 'none', padding: 0, fontSize: '0.62rem', color: '#06b6d4', cursor: 'pointer' }}>
+      <button onClick={() => setOpen(o => !o)} style={{ background: 'none', border: 'none', padding: 0, fontSize: '0.62rem', color: '#4f7d78', cursor: 'pointer' }}>
         {open ? 'Hide' : 'Show'} bill of quantities ({boq.lines.length} lines)
       </button>
       {open && (
         <div style={{ marginTop: '0.4rem', display: 'flex', flexDirection: 'column', gap: '0.3rem' }}>
           {boq.lines.map(l => (
-            <div key={l.key} style={{ fontSize: '0.6rem', borderBottom: '1px solid rgba(255,255,255,0.04)', paddingBottom: '0.25rem' }}>
+            <div key={l.key} style={{ fontSize: '0.6rem', borderBottom: '1px solid rgba(60,52,44,0.048)', paddingBottom: '0.25rem' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', gap: '0.4rem' }}>
                 <span style={{ color: 'var(--text-secondary)' }}>{l.label}</span>
-                <span style={{ color: '#f1f5f9', fontWeight: 600, whiteSpace: 'nowrap' }}>{formatCurrency(l.amount)}</span>
+                <span style={{ color: '#2b2926', fontWeight: 600, whiteSpace: 'nowrap' }}>{formatCurrency(l.amount)}</span>
               </div>
               <div style={{ display: 'flex', justifyContent: 'space-between', gap: '0.4rem', color: 'var(--text-tertiary)' }}>
                 <span>{l.unit === 'LS' ? l.ref : `${l.qty} ${l.unit} × ₹${l.rate.toLocaleString('en-IN')}`}</span>
-                <span style={{ whiteSpace: 'nowrap', color: l.status === 'verified' ? '#10b981' : l.status === 'placeholder' || l.status === 'interim' ? '#f59e0b' : 'var(--text-tertiary)' }}>
+                <span style={{ whiteSpace: 'nowrap', color: l.status === 'verified' ? '#5c7d59' : l.status === 'placeholder' || l.status === 'interim' ? '#a57c3a' : 'var(--text-tertiary)' }}>
                   {l.status === 'verified' ? `${l.ref} · p.${l.page}` : l.status}
                 </span>
               </div>

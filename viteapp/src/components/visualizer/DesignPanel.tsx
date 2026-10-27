@@ -13,14 +13,14 @@ const SIDES: WallSide[] = ['front', 'back', 'left', 'right'];
 
 const FIELD: React.CSSProperties = {
   width: '100%', boxSizing: 'border-box', padding: '0.45rem 0.55rem',
-  background: 'rgba(255,255,255,0.06)', border: '1px solid var(--border-subtle)',
-  borderRadius: '7px', color: '#f1f5f9', fontSize: '0.8rem',
+  background: 'rgba(60,52,44,0.072)', border: '1px solid var(--border-subtle)',
+  borderRadius: '7px', color: '#2b2926', fontSize: '0.8rem',
 };
 const LABEL: React.CSSProperties = { fontSize: '0.58rem', fontWeight: 700, letterSpacing: '0.1em', color: 'var(--text-tertiary)' };
 const HINT: React.CSSProperties = { fontSize: '0.66rem', color: 'var(--text-tertiary)', lineHeight: 1.45 };
 const ICON_BTN: React.CSSProperties = {
   display: 'flex', alignItems: 'center', justifyContent: 'center', width: '24px', height: '24px', flexShrink: 0,
-  borderRadius: '6px', border: '1px solid var(--border-subtle)', background: 'rgba(255,255,255,0.04)',
+  borderRadius: '6px', border: '1px solid var(--border-subtle)', background: 'rgba(60,52,44,0.048)',
   color: 'var(--text-secondary)', cursor: 'pointer', padding: 0,
 };
 
@@ -63,9 +63,9 @@ export function DesignPanel() {
             if (id === 'shapes' || id === 'walls') setFocusFloor(null);
           }} style={{
             flex: 1, padding: '0.4rem 0', borderRadius: '7px', fontSize: '0.7rem', fontWeight: 700, cursor: 'pointer',
-            background: tab === id ? 'rgba(6,182,212,0.15)' : 'transparent',
-            border: `1px solid ${tab === id ? 'rgba(6,182,212,0.4)' : 'var(--border-subtle)'}`,
-            color: tab === id ? '#06b6d4' : 'var(--text-secondary)',
+            background: tab === id ? 'rgba(79,125,120,0.15)' : 'transparent',
+            border: `1px solid ${tab === id ? 'rgba(79,125,120,0.4)' : 'var(--border-subtle)'}`,
+            color: tab === id ? '#4f7d78' : 'var(--text-secondary)',
           }}>{label}</button>
         ))}
       </div>
@@ -89,7 +89,7 @@ export function DesignPanel() {
                   }
                 }}
                 style={{ ...FIELD, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.35rem', cursor: 'pointer',
-                  fontSize: '0.72rem', fontWeight: 700, color: '#fca5a5', borderColor: 'rgba(248,113,113,0.35)', background: 'rgba(248,113,113,0.06)' }}>
+                  fontSize: '0.72rem', fontWeight: 700, color: '#7f3f32', borderColor: 'rgba(154,80,64,0.35)', background: 'rgba(154,80,64,0.06)' }}>
                 <Trash2 size={13} /> Delete Floor {floor.number}
               </button>
             )}
@@ -110,8 +110,8 @@ export function DesignPanel() {
         {notice && !placing && (
           <div style={{
             fontSize: '0.7rem', lineHeight: 1.45, padding: '0.45rem 0.55rem', borderRadius: '8px',
-            color: notice.error ? '#f87171' : '#34d399',
-            background: notice.error ? 'rgba(248,113,113,0.08)' : 'rgba(52,211,153,0.08)',
+            color: notice.error ? '#9a5040' : '#4c6b49',
+            background: notice.error ? 'rgba(154,80,64,0.08)' : 'rgba(76,107,73,0.08)',
           }}>{notice.text}</div>
         )}
       </div>
@@ -129,9 +129,9 @@ function FloorPicker({ floors, value, onChange }: { floors: Floor[]; value?: num
         {floors.map(f => (
           <button key={f.id} onClick={() => onChange(f.number)} style={{
             padding: '0.3rem 0.65rem', borderRadius: '6px', fontSize: '0.72rem', fontWeight: 700, cursor: 'pointer',
-            background: value === f.number ? 'rgba(124,58,237,0.25)' : 'rgba(255,255,255,0.04)',
-            border: `1px solid ${value === f.number ? '#7c3aed' : 'var(--border-subtle)'}`,
-            color: value === f.number ? '#e9d5ff' : 'var(--text-secondary)',
+            background: value === f.number ? 'rgba(110,104,144,0.25)' : 'rgba(60,52,44,0.048)',
+            border: `1px solid ${value === f.number ? '#6e6890' : 'var(--border-subtle)'}`,
+            color: value === f.number ? '#4f4a6e' : 'var(--text-secondary)',
           }}>Floor {f.number}</button>
         ))}
       </div>
@@ -177,13 +177,13 @@ function RoomTab({ floor, busy, run }: {
 
   if (placing) {
     return (
-      <div style={{ border: '1px solid rgba(6,182,212,0.4)', background: 'rgba(6,182,212,0.08)', borderRadius: '10px', padding: '0.7rem' }}>
-        <div style={{ fontSize: '0.82rem', fontWeight: 700, color: '#06b6d4', display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+      <div style={{ border: '1px solid rgba(79,125,120,0.4)', background: 'rgba(79,125,120,0.08)', borderRadius: '10px', padding: '0.7rem' }}>
+        <div style={{ fontSize: '0.82rem', fontWeight: 700, color: '#4f7d78', display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
           <MousePointerClick size={15} /> Click in the 3D view where it goes
         </div>
         <div style={{ ...HINT, marginTop: '0.4rem' }}>
-          <b style={{ color: '#e2e8f0' }}>{placing.name || placing.type}</b> · {placing.w} × {placing.d} ft on Floor {placing.floor}.
-          The box turns <b style={{ color: '#34d399' }}>green</b> where it fits and <b style={{ color: '#f87171' }}>red</b> where it would
+          <b style={{ color: '#3d3a35' }}>{placing.name || placing.type}</b> · {placing.w} × {placing.d} ft on Floor {placing.floor}.
+          The box turns <b style={{ color: '#4c6b49' }}>green</b> where it fits and <b style={{ color: '#9a5040' }}>red</b> where it would
           leave the floor or overlap another room. Drag to orbit the view.
         </div>
         <div style={{ display: 'flex', gap: '0.4rem', marginTop: '0.55rem' }}>
@@ -194,7 +194,7 @@ function RoomTab({ floor, busy, run }: {
             <X size={13} /> Cancel (Esc)
           </button>
         </div>
-        {notice?.error && <div style={{ fontSize: '0.68rem', color: '#f87171', marginTop: '0.45rem' }}>{notice.text}</div>}
+        {notice?.error && <div style={{ fontSize: '0.68rem', color: '#9a5040', marginTop: '0.45rem' }}>{notice.text}</div>}
       </div>
     );
   }
@@ -203,10 +203,10 @@ function RoomTab({ floor, busy, run }: {
     <>
       {/* Area meter */}
       <div>
-        <div style={{ height: '6px', borderRadius: '3px', background: 'rgba(255,255,255,0.06)', overflow: 'hidden' }}>
-          <div style={{ width: `${Math.min(100, (used / Math.max(floor.area_sqft, 1)) * 100)}%`, height: '100%', background: 'linear-gradient(90deg,#7c3aed,#06b6d4)' }} />
+        <div style={{ height: '6px', borderRadius: '3px', background: 'rgba(60,52,44,0.072)', overflow: 'hidden' }}>
+          <div style={{ width: `${Math.min(100, (used / Math.max(floor.area_sqft, 1)) * 100)}%`, height: '100%', background: 'linear-gradient(90deg, #7d8aa3, #8fa9a2)' }} />
         </div>
-        <div style={{ ...HINT, marginTop: '0.3rem' }}>{used} of {floor.area_sqft} sq ft used · <b style={{ color: free > 0 ? '#34d399' : '#f87171' }}>{free} sq ft free</b></div>
+        <div style={{ ...HINT, marginTop: '0.3rem' }}>{used} of {floor.area_sqft} sq ft used · <b style={{ color: free > 0 ? '#4c6b49' : '#9a5040' }}>{free} sq ft free</b></div>
       </div>
 
       {/* Whole-home presets — the dialog asks which floor and suggests sizes */}
@@ -233,12 +233,12 @@ function RoomTab({ floor, busy, run }: {
             return (
               <div key={r.id} style={{
                 display: 'flex', alignItems: 'center', gap: '0.45rem', padding: '0.4rem 0.5rem', borderRadius: '8px',
-                background: `${m.color}12`, border: `1px solid ${placed ? `${m.color}55` : 'rgba(251,191,36,0.5)'}`,
+                background: `${m.color}12`, border: `1px solid ${placed ? `${m.color}55` : 'rgba(165,124,58,0.5)'}`,
               }}>
                 <span style={{ width: '22px', height: '22px', borderRadius: '5px', background: `${m.color}30`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.75rem', flexShrink: 0 }}>{m.symbol}</span>
                 <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ fontSize: '0.76rem', fontWeight: 700, color: '#f1f5f9', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{r.name}</div>
-                  <div style={{ fontSize: '0.62rem', color: placed ? 'var(--text-tertiary)' : '#fbbf24' }}>
+                  <div style={{ fontSize: '0.76rem', fontWeight: 700, color: '#2b2926', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{r.name}</div>
+                  <div style={{ fontSize: '0.62rem', color: placed ? 'var(--text-tertiary)' : '#8c6a2f' }}>
                     {r.w} × {r.d} ft · {r.area_sqft} sq ft{placed ? ` · at ${r.x}, ${r.z}` : ' · not placed'}
                   </div>
                 </div>
@@ -252,7 +252,7 @@ function RoomTab({ floor, busy, run }: {
                   </>
                 ) : (
                   <button disabled={busy} onClick={() => { setNotice(null); setPlacing({ kind: 'existing', floor: floor.number, roomId: r.id, type: r.type, name: r.name, w: r.w, d: r.d }); }}
-                    style={{ ...ICON_BTN, width: 'auto', padding: '0 0.5rem', fontSize: '0.64rem', fontWeight: 700, color: '#fbbf24', borderColor: 'rgba(251,191,36,0.5)' }}>
+                    style={{ ...ICON_BTN, width: 'auto', padding: '0 0.5rem', fontSize: '0.64rem', fontWeight: 700, color: '#8c6a2f', borderColor: 'rgba(165,124,58,0.5)' }}>
                     Place
                   </button>
                 )}
@@ -270,7 +270,7 @@ function RoomTab({ floor, busy, run }: {
           {Object.entries(ROOM_META).map(([id, m]) => (
             <button key={id} onClick={() => setType(id)} style={{
               padding: '0.35rem 0.1rem', borderRadius: '6px', fontSize: '0.64rem', fontWeight: 600, cursor: 'pointer', textTransform: 'capitalize',
-              background: type === id ? `${m.color}26` : 'rgba(255,255,255,0.03)',
+              background: type === id ? `${m.color}26` : 'rgba(60,52,44,0.036)',
               border: `1px solid ${type === id ? m.color : 'var(--border-subtle)'}`,
               color: type === id ? m.color : 'var(--text-secondary)',
             }}>{m.symbol} {id}</button>
@@ -278,7 +278,7 @@ function RoomTab({ floor, busy, run }: {
         </div>
         <label style={LABEL}>
           HOW MANY SQ FT? *
-          <input style={{ ...FIELD, marginTop: '0.25rem', fontSize: '1rem', fontWeight: 700, borderColor: area ? 'var(--border-subtle)' : 'rgba(6,182,212,0.5)' }}
+          <input style={{ ...FIELD, marginTop: '0.25rem', fontSize: '1rem', fontWeight: 700, borderColor: area ? 'var(--border-subtle)' : 'rgba(79,125,120,0.5)' }}
             type="number" inputMode="numeric" min={16} placeholder={`e.g. ${roomMeta(type).suggestedSqft}`}
             value={area} onChange={e => setArea(e.target.value)} />
         </label>
@@ -286,9 +286,9 @@ function RoomTab({ floor, busy, run }: {
           {sizeChoices(type).map(c => (
             <button key={c.label} onClick={() => setArea(String(c.sqft))} style={{
               flex: 1, padding: '0.3rem 0.2rem', borderRadius: '6px', cursor: 'pointer', fontSize: '0.64rem', fontWeight: 700,
-              background: area === String(c.sqft) ? 'rgba(6,182,212,0.18)' : 'rgba(255,255,255,0.03)',
-              border: `1px solid ${area === String(c.sqft) ? 'rgba(6,182,212,0.5)' : 'var(--border-subtle)'}`,
-              color: c.sqft > free ? 'var(--text-tertiary)' : area === String(c.sqft) ? '#06b6d4' : 'var(--text-secondary)',
+              background: area === String(c.sqft) ? 'rgba(79,125,120,0.18)' : 'rgba(60,52,44,0.036)',
+              border: `1px solid ${area === String(c.sqft) ? 'rgba(79,125,120,0.5)' : 'var(--border-subtle)'}`,
+              color: c.sqft > free ? 'var(--text-tertiary)' : area === String(c.sqft) ? '#4f7d78' : 'var(--text-secondary)',
             }}>{c.label}<br /><span style={{ fontWeight: 500 }}>{c.sqft} sq ft</span></button>
           ))}
         </div>
@@ -303,7 +303,7 @@ function RoomTab({ floor, busy, run }: {
             <input style={{ ...FIELD, marginTop: '0.25rem' }} placeholder={`${type[0].toUpperCase() + type.slice(1)} ${floor.rooms.filter(r => r.type === type).length + 1}`} value={name} onChange={e => setName(e.target.value)} />
           </label>
         </div>
-        <div style={{ fontSize: '0.68rem', color: error ? '#f87171' : 'var(--text-tertiary)' }}>
+        <div style={{ fontSize: '0.68rem', color: error ? '#9a5040' : 'var(--text-tertiary)' }}>
           {error ?? (dims ? `→ ${dims.w} × ${dims.d} ft = ${dims.w * dims.d} sq ft` : 'Type the size, then pick the spot in 3D.')}
         </div>
         <button disabled={!dims || !!error || busy}
@@ -316,7 +316,7 @@ function RoomTab({ floor, busy, run }: {
           style={{
             display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.35rem', padding: '0.6rem',
             borderRadius: '8px', border: 'none', fontSize: '0.78rem', fontWeight: 700,
-            background: !dims || error ? 'rgba(255,255,255,0.06)' : 'linear-gradient(135deg,#7c3aed,#06b6d4)',
+            background: !dims || error ? 'rgba(60,52,44,0.072)' : '#5d6b80',
             color: !dims || error ? 'var(--text-tertiary)' : '#fff', cursor: !dims || error ? 'not-allowed' : 'pointer',
           }}>
           <MousePointerClick size={14} /> Place it in the 3D view
@@ -352,19 +352,19 @@ function WindowsTab({ floor, busy, onSave }: {
       <label style={LABEL}>
         WHICH ROOM?
         <select style={{ ...FIELD, marginTop: '0.25rem' }} value={room.id} onChange={e => setRoomId(e.target.value)}>
-          {placed.map(r => <option key={r.id} value={r.id} style={{ background: '#1a1a2e' }}>{roomMeta(r.type).symbol} {r.name} ({r.area_sqft} sq ft)</option>)}
+          {placed.map(r => <option key={r.id} value={r.id} style={{ background: '#efebe4' }}>{roomMeta(r.type).symbol} {r.name} ({r.area_sqft} sq ft)</option>)}
         </select>
       </label>
-      <div style={{ ...HINT, padding: '0.5rem 0.6rem', borderRadius: '8px', background: glazing >= need ? 'rgba(52,211,153,0.08)' : 'rgba(251,191,36,0.08)' }}>
-        Suggested (NBC 2016): at least <b style={{ color: '#e2e8f0' }}>{need} sq ft</b> of window
+      <div style={{ ...HINT, padding: '0.5rem 0.6rem', borderRadius: '8px', background: glazing >= need ? 'rgba(76,107,73,0.08)' : 'rgba(165,124,58,0.08)' }}>
+        Suggested (NBC 2016): at least <b style={{ color: '#3d3a35' }}>{need} sq ft</b> of window
         {room.type === 'bathroom' ? ' (a high ventilator)' : ` (1/10 of ${room.area_sqft} sq ft)`}.
-        Added so far: <b style={{ color: glazing >= need ? '#34d399' : '#fbbf24' }}>{Math.round(glazing)} sq ft</b>.
+        Added so far: <b style={{ color: glazing >= need ? '#4c6b49' : '#8c6a2f' }}>{Math.round(glazing)} sq ft</b>.
         {room.type !== 'bathroom' && outside.length > 1 && ' Windows on two different walls give cross-ventilation.'}
       </div>
       {outside.length === 0 ? (
         <div style={HINT}>{room.name} has no outside walls — move it to an edge of the floor to give it windows.</div>
       ) : (
-        <button disabled={busy} onClick={addSuggested} style={{ ...FIELD, cursor: 'pointer', fontWeight: 700, color: '#06b6d4', borderColor: 'rgba(6,182,212,0.4)' }}>
+        <button disabled={busy} onClick={addSuggested} style={{ ...FIELD, cursor: 'pointer', fontWeight: 700, color: '#4f7d78', borderColor: 'rgba(79,125,120,0.4)' }}>
           Add suggested windows to {room.name}
         </button>
       )}
@@ -396,10 +396,10 @@ function SideRow({ side, length, spec, suggestion, busy, onSave }: {
   }
   const cell = { ...FIELD, padding: '0.3rem 0.35rem', fontSize: '0.74rem' };
   return (
-    <div style={{ border: `1px solid ${spec?.count ? 'rgba(6,182,212,0.4)' : 'var(--border-subtle)'}`, borderRadius: '8px', padding: '0.45rem 0.5rem' }}>
-      <div style={{ display: 'flex', fontSize: '0.68rem', fontWeight: 700, color: '#e2e8f0', marginBottom: '0.3rem' }}>
+    <div style={{ border: `1px solid ${spec?.count ? 'rgba(79,125,120,0.4)' : 'var(--border-subtle)'}`, borderRadius: '8px', padding: '0.45rem 0.5rem' }}>
+      <div style={{ display: 'flex', fontSize: '0.68rem', fontWeight: 700, color: '#3d3a35', marginBottom: '0.3rem' }}>
         {label} wall · {length} ft
-        <span style={{ marginLeft: 'auto', fontWeight: 600, color: spec?.count ? '#06b6d4' : 'var(--text-tertiary)' }}>
+        <span style={{ marginLeft: 'auto', fontWeight: 600, color: spec?.count ? '#4f7d78' : 'var(--text-tertiary)' }}>
           {spec?.count ? `${spec.count} added` : 'none'}
         </span>
       </div>
@@ -408,7 +408,7 @@ function SideRow({ side, length, spec, suggestion, busy, onSave }: {
         <label style={LABEL}>W (FT)<input style={cell} type="number" min={1} max={16} step={0.5} value={w} onChange={e => setW(e.target.value)} /></label>
         <label style={LABEL}>H (FT)<input style={cell} type="number" min={1} max={7} step={0.5} value={h} onChange={e => setH(e.target.value)} /></label>
         <button disabled={busy} onClick={() => onSave({ side, count: parseInt(count, 10) || 0, width_ft: parseFloat(w) || 4, height_ft: parseFloat(h) || 4 })}
-          style={{ ...cell, width: 'auto', cursor: 'pointer', background: 'rgba(124,58,237,0.25)', borderColor: '#7c3aed', fontWeight: 700 }}>
+          style={{ ...cell, width: 'auto', cursor: 'pointer', background: 'rgba(110,104,144,0.25)', borderColor: '#6e6890', fontWeight: 700 }}>
           {spec ? 'Update' : 'Add'}
         </button>
       </div>
@@ -432,9 +432,9 @@ function WallsTab({ state, busy, onSave }: { state: BuildingState; busy: boolean
       {options.map(o => (
         <button key={o} onClick={() => set(o)} style={{
           padding: '0.3rem 0.5rem', borderRadius: '6px', fontSize: '0.68rem', fontWeight: 700, cursor: 'pointer',
-          background: value === o ? 'rgba(124,58,237,0.25)' : 'rgba(255,255,255,0.04)',
-          border: `1px solid ${value === o ? '#7c3aed' : 'var(--border-subtle)'}`,
-          color: value === o ? '#e9d5ff' : 'var(--text-secondary)',
+          background: value === o ? 'rgba(110,104,144,0.25)' : 'rgba(60,52,44,0.048)',
+          border: `1px solid ${value === o ? '#6e6890' : 'var(--border-subtle)'}`,
+          color: value === o ? '#4f4a6e' : 'var(--text-secondary)',
         }}>{o}″<span style={{ opacity: 0.6, fontWeight: 500 }}> {inchToMm(o)}mm</span></button>
       ))}
     </div>
@@ -442,14 +442,14 @@ function WallsTab({ state, busy, onSave }: { state: BuildingState; busy: boolean
 
   return (
     <>
-      <div style={{ ...HINT, color: '#e2e8f0' }}>
+      <div style={{ ...HINT, color: '#3d3a35' }}>
         Current: <b>{exteriorWallIn}″</b> outside ({inchToMm(exteriorWallIn)} mm) · <b>{interiorWallIn}″</b> inside ({inchToMm(interiorWallIn)} mm)
       </div>
       <div style={LABEL}>EXTERIOR WALLS{pick(ext, setExt, WALL_OPTIONS_IN)}</div>
       <div style={LABEL}>INTERIOR WALLS{pick(int, setInt, WALL_OPTIONS_IN.filter(o => o <= 9))}</div>
       <div style={HINT}>Outer walls at {ext}″ take roughly {lostSqft} sq ft of each floor's built-up area.</div>
-      <div style={{ padding: '0.55rem 0.65rem', borderRadius: '8px', background: 'rgba(6,182,212,0.07)', border: '1px solid rgba(6,182,212,0.25)' }}>
-        <div style={{ fontSize: '0.72rem', fontWeight: 700, color: '#06b6d4', marginBottom: '0.3rem' }}>
+      <div style={{ padding: '0.55rem 0.65rem', borderRadius: '8px', background: 'rgba(79,125,120,0.07)', border: '1px solid rgba(79,125,120,0.25)' }}>
+        <div style={{ fontSize: '0.72rem', fontWeight: 700, color: '#4f7d78', marginBottom: '0.3rem' }}>
           Suggested for {state.district.name}, {state.floors.length || 1} floor(s): {sugg.exteriorIn}″ outer / {sugg.interiorIn}″ inner
         </div>
         <ul style={{ margin: 0, paddingLeft: '1rem', ...HINT }}>
@@ -460,7 +460,7 @@ function WallsTab({ state, busy, onSave }: { state: BuildingState; busy: boolean
       </div>
       <button disabled={busy || (ext === exteriorWallIn && int === interiorWallIn)} onClick={() => onSave(ext, int)}
         style={{ padding: '0.55rem', borderRadius: '8px', border: 'none', fontWeight: 700, fontSize: '0.78rem', cursor: 'pointer',
-          background: 'linear-gradient(135deg,#7c3aed,#06b6d4)', color: '#fff',
+          background: '#5d6b80', color: '#fff',
           opacity: ext === exteriorWallIn && int === interiorWallIn ? 0.45 : 1 }}>
         Save wall thickness
       </button>
@@ -479,9 +479,9 @@ function ShapesTab({ floors, busy, onSet }: { floors: Floor[]; busy: boolean; on
       </div>
       {[...floors].reverse().map(f => (
         <div key={f.id} style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-          <span style={{ width: '2.4rem', fontSize: '0.72rem', fontWeight: 700, color: '#e2e8f0' }}>F{f.number}</span>
+          <span style={{ width: '2.4rem', fontSize: '0.72rem', fontWeight: 700, color: '#3d3a35' }}>F{f.number}</span>
           <select disabled={busy} value={f.shape} onChange={e => onSet(f.number, e.target.value)} style={{ ...FIELD, padding: '0.35rem 0.45rem' }}>
-            {SHAPES.map(s => <option key={s.id} value={s.id} style={{ background: '#1a1a2e' }}>{s.label}</option>)}
+            {SHAPES.map(s => <option key={s.id} value={s.id} style={{ background: '#efebe4' }}>{s.label}</option>)}
           </select>
           <span style={{ fontSize: '0.62rem', color: 'var(--text-tertiary)', whiteSpace: 'nowrap' }}>{f.area_sqft} ft²</span>
         </div>

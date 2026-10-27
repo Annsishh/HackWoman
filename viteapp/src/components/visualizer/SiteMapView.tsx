@@ -65,7 +65,7 @@ function projector(center: LngLat, plotW: number, plotD: number, headingDeg: num
    Per floor: a protruding slab band, cream walls, glass windows along every
    outside wall; a front door on the ground floor; a stepped hip roof with eaves
    on top. Plan units are feet (building frame, z towards the road); heights metres. */
-const WALL = '#ece3d2', SLAB = '#a8a29e', GLASS = '#2563eb', DOOR = '#78350f', ROOF = ['#9a3412', '#b45309'];
+const WALL = '#ece3d2', SLAB = '#a8a29e', GLASS = '#8fa5c2', DOOR = '#78350f', ROOF = ['#9a3412', '#b45309'];
 const WINDOW_EVERY_FT = 10, WINDOW_W_FT = 4, PROUD_FT = 0.35;
 const ROOF_STEPS = 6, ROOF_STEP_M = 0.32, EAVES_FT = 1.2;
 
@@ -276,7 +276,7 @@ export function SiteMapView({ onClose }: { onClose: () => void }) {
       });
       map.addSource('plot', { type: 'geojson', maxzoom: 24, data: { type: 'FeatureCollection', features: [] } });
       map.addSource('house', { type: 'geojson', maxzoom: 24, data: { type: 'FeatureCollection', features: [] } });
-      map.addLayer({ id: 'plot-fill', type: 'fill', source: 'plot', paint: { 'fill-color': '#84cc16', 'fill-opacity': 0.15 } });
+      map.addLayer({ id: 'plot-fill', type: 'fill', source: 'plot', paint: { 'fill-color': '#b3bc8a', 'fill-opacity': 0.15 } });
       map.addLayer({ id: 'plot-line', type: 'line', source: 'plot', paint: { 'line-color': '#ffffff', 'line-width': 2, 'line-dasharray': [2, 2] } });
       map.addLayer({
         id: 'house', type: 'fill-extrusion', source: 'house',
@@ -324,17 +324,17 @@ export function SiteMapView({ onClose }: { onClose: () => void }) {
   const heightM = floors * STOREY_M + (floors ? ROOF_STEPS * ROOF_STEP_M : 0);
 
   return (
-    <div style={{ position: 'fixed', inset: 0, zIndex: 2500, background: 'rgba(0,0,0,0.7)', display: 'flex', flexDirection: 'column' }}>
+    <div style={{ position: 'fixed', inset: 0, zIndex: 2500, background: 'rgba(60,52,44,0.245)', display: 'flex', flexDirection: 'column' }}>
       {/* Header */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap', padding: '0.6rem 1rem', background: '#0d0d14', borderBottom: '1px solid var(--border-subtle)' }}>
-        <MapPin size={16} color="#06b6d4" />
-        <span style={{ fontWeight: 800, fontSize: '0.9rem', color: '#f1f5f9' }}>Site on map</span>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap', padding: '0.6rem 1rem', background: '#fbfaf7', borderBottom: '1px solid var(--border-subtle)' }}>
+        <MapPin size={16} color="#4f7d78" />
+        <span style={{ fontWeight: 800, fontSize: '0.9rem', color: '#2b2926' }}>Site on map</span>
         <div style={{ display: 'flex', gap: '0.35rem', flex: '1 1 260px', maxWidth: '420px' }}>
           <input value={query} onChange={e => setQuery(e.target.value)} onKeyDown={e => { if (e.key === 'Enter') search(); }}
             placeholder="Search a place, or click the map" disabled={busy}
-            style={{ flex: 1, minWidth: 0, background: 'rgba(255,255,255,0.05)', border: '1px solid var(--border-subtle)', borderRadius: '6px', padding: '0.4rem 0.6rem', fontSize: '0.78rem', color: 'var(--text-primary)' }} />
+            style={{ flex: 1, minWidth: 0, background: 'rgba(60,52,44,0.06)', border: '1px solid var(--border-subtle)', borderRadius: '6px', padding: '0.4rem 0.6rem', fontSize: '0.78rem', color: 'var(--text-primary)' }} />
           <button onClick={search} disabled={busy || !query.trim()} title="Search"
-            style={{ padding: '0 0.6rem', borderRadius: '6px', border: '1px solid rgba(6,182,212,0.35)', background: 'rgba(6,182,212,0.12)', color: '#06b6d4', cursor: 'pointer' }}>
+            style={{ padding: '0 0.6rem', borderRadius: '6px', border: '1px solid rgba(79,125,120,0.35)', background: 'rgba(79,125,120,0.12)', color: '#4f7d78', cursor: 'pointer' }}>
             <Search size={14} />
           </button>
         </div>
@@ -355,26 +355,26 @@ export function SiteMapView({ onClose }: { onClose: () => void }) {
         <div ref={container} style={{ position: 'absolute', inset: 0 }} />
 
         {!center && (
-          <div style={{ position: 'absolute', top: '1rem', left: '50%', transform: 'translateX(-50%)', padding: '0.5rem 0.9rem', borderRadius: '20px', background: 'rgba(13,13,20,0.9)', border: '1px solid rgba(6,182,212,0.5)', color: '#e0f2fe', fontSize: '0.8rem', fontWeight: 700, pointerEvents: 'none' }}>
+          <div style={{ position: 'absolute', top: '1rem', left: '50%', transform: 'translateX(-50%)', padding: '0.5rem 0.9rem', borderRadius: '20px', background: 'rgba(255,255,255,0.9)', border: '1px solid rgba(79,125,120,0.5)', color: '#dde6ec', fontSize: '0.8rem', fontWeight: 700, pointerEvents: 'none' }}>
             Click an open spot on the map to place your house (zoom in to see buildings)
           </div>
         )}
 
         {center && siteOccupied && !pending && (
-          <div style={{ position: 'absolute', top: '1rem', left: '50%', transform: 'translateX(-50%)', padding: '0.5rem 0.9rem', borderRadius: '20px', background: 'rgba(127,29,29,0.92)', border: '1px solid #ef4444', color: '#fee2e2', fontSize: '0.78rem', fontWeight: 700, pointerEvents: 'none' }}>
+          <div style={{ position: 'absolute', top: '1rem', left: '50%', transform: 'translateX(-50%)', padding: '0.5rem 0.9rem', borderRadius: '20px', background: 'rgba(110,60,52,0.92)', border: '1px solid #b0604f', color: '#7f3f32', fontSize: '0.78rem', fontWeight: 700, pointerEvents: 'none' }}>
             ⚠️ This site overlaps an existing building — click an open area to move the house
           </div>
         )}
 
         {blocked && (
           <div role="dialog" aria-modal="true" onClick={() => setBlocked(null)}
-            style={{ position: 'absolute', inset: 0, zIndex: 5, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem' }}>
+            style={{ position: 'absolute', inset: 0, zIndex: 5, background: 'rgba(60,52,44,0.175)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem' }}>
             <div onClick={e => e.stopPropagation()}
-              style={{ width: 'min(380px, 100%)', background: '#13131d', border: '1px solid #ef444466', borderTop: '3px solid #ef4444', borderRadius: '12px', padding: '1.1rem 1.2rem', boxShadow: '0 20px 50px rgba(0,0,0,0.6)' }}>
-              <div style={{ fontSize: '1rem', fontWeight: 800, color: '#f1f5f9', marginBottom: '0.5rem' }}>🏠 {blocked.title}</div>
+              style={{ width: 'min(380px, 100%)', background: '#ffffff', border: '1px solid #b0604f66', borderTop: '3px solid #b0604f', borderRadius: '12px', padding: '1.1rem 1.2rem', boxShadow: '0 20px 50px rgba(60,52,44,0.21)' }}>
+              <div style={{ fontSize: '1rem', fontWeight: 800, color: '#2b2926', marginBottom: '0.5rem' }}>🏠 {blocked.title}</div>
               <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', lineHeight: 1.5 }}>{blocked.message}</div>
               <button onClick={() => setBlocked(null)} autoFocus
-                style={{ marginTop: '0.9rem', width: '100%', padding: '0.5rem', borderRadius: '8px', border: 'none', background: '#ef4444', color: '#fff', fontWeight: 700, fontSize: '0.8rem', cursor: 'pointer' }}>
+                style={{ marginTop: '0.9rem', width: '100%', padding: '0.5rem', borderRadius: '8px', border: 'none', background: '#b0604f', color: '#fff', fontWeight: 700, fontSize: '0.8rem', cursor: 'pointer' }}>
                 Choose another spot
               </button>
             </div>
@@ -382,8 +382,8 @@ export function SiteMapView({ onClose }: { onClose: () => void }) {
         )}
 
         {center && (
-          <div style={{ position: 'absolute', left: '1rem', top: '1rem', maxWidth: '300px', padding: '0.6rem 0.75rem', borderRadius: '10px', background: 'rgba(13,13,20,0.9)', border: '1px solid var(--border-subtle)', fontSize: '0.72rem', color: 'var(--text-secondary)', lineHeight: 1.5 }}>
-            <div style={{ color: '#f1f5f9', fontWeight: 700 }}>
+          <div style={{ position: 'absolute', left: '1rem', top: '1rem', maxWidth: '300px', padding: '0.6rem 0.75rem', borderRadius: '10px', background: 'rgba(255,255,255,0.9)', border: '1px solid var(--border-subtle)', fontSize: '0.72rem', color: 'var(--text-secondary)', lineHeight: 1.5 }}>
+            <div style={{ color: '#2b2926', fontWeight: 700 }}>
               {busy ? 'Setting site…' : state.location?.address?.split(',').slice(0, 2).join(',') || `${center.lat.toFixed(5)}, ${center.lng.toFixed(5)}`}
             </div>
             <div>{center.lat.toFixed(5)}° N, {center.lng.toFixed(5)}° E · {state.district.name}</div>

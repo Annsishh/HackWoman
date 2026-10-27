@@ -53,7 +53,7 @@ export function NotificationsPanel({ onClose }: NotificationsPanelProps) {
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
           <span style={{ fontSize: '0.88rem', fontWeight: 700, color: 'var(--text-primary)' }}>Notifications</span>
           {unreadCount > 0 && (
-            <span style={{ background: '#ef4444', color: '#fff', fontSize: '0.58rem', fontWeight: 800, borderRadius: '20px', padding: '0.1rem 0.45rem', lineHeight: 1.6 }}>
+            <span style={{ background: '#b0604f', color: '#fff', fontSize: '0.58rem', fontWeight: 800, borderRadius: '20px', padding: '0.1rem 0.45rem', lineHeight: 1.6 }}>
               {unreadCount} new
             </span>
           )}
@@ -64,7 +64,7 @@ export function NotificationsPanel({ onClose }: NotificationsPanelProps) {
               background: 'none', border: 'none', cursor: 'pointer', padding: '4px',
               color: 'var(--text-tertiary)', display: 'flex', borderRadius: '6px',
             }}
-              onMouseEnter={e => (e.currentTarget.style.background = 'rgba(239,68,68,0.1)')}
+              onMouseEnter={e => (e.currentTarget.style.background = 'rgba(176,96,79,0.1)')}
               onMouseLeave={e => (e.currentTarget.style.background = 'none')}
             >
               <Trash2 size={14} />
@@ -92,11 +92,11 @@ export function NotificationsPanel({ onClose }: NotificationsPanelProps) {
               style={{
                 padding: '0.85rem 1.1rem', cursor: 'pointer', transition: 'background 0.15s',
                 borderBottom: i < notifications.length - 1 ? '1px solid var(--border-subtle)' : 'none',
-                background: n.read ? 'transparent' : 'rgba(124,58,237,0.04)',
+                background: n.read ? 'transparent' : 'rgba(110,104,144,0.04)',
                 display: 'flex', gap: '0.75rem', position: 'relative',
               }}
-              onMouseEnter={e => (e.currentTarget.style.background = 'rgba(255,255,255,0.04)')}
-              onMouseLeave={e => (e.currentTarget.style.background = n.read ? 'transparent' : 'rgba(124,58,237,0.04)')}
+              onMouseEnter={e => (e.currentTarget.style.background = 'rgba(60,52,44,0.048)')}
+              onMouseLeave={e => (e.currentTarget.style.background = n.read ? 'transparent' : 'rgba(110,104,144,0.04)')}
             >
               {/* Icon */}
               <div style={{ width: '32px', height: '32px', borderRadius: '8px', flexShrink: 0, marginTop: '1px',
@@ -109,7 +109,7 @@ export function NotificationsPanel({ onClose }: NotificationsPanelProps) {
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '0.4rem', marginBottom: '0.25rem' }}>
                   <span style={{ fontSize: '0.78rem', fontWeight: 700, color: 'var(--text-primary)', lineHeight: 1.3 }}>{n.title}</span>
-                  {!n.read && <span style={{ width: '7px', height: '7px', borderRadius: '50%', background: '#a78bfa', flexShrink: 0, marginTop: '3px' }} />}
+                  {!n.read && <span style={{ width: '7px', height: '7px', borderRadius: '50%', background: '#5f5a80', flexShrink: 0, marginTop: '3px' }} />}
                 </div>
                 <div style={{ fontSize: '0.7rem', color: 'var(--text-secondary)', lineHeight: 1.5, marginBottom: '0.3rem' }}>{n.body}</div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.3rem', fontSize: '0.62rem', color: 'var(--text-tertiary)' }}>
@@ -134,11 +134,11 @@ export function NotificationsPanel({ onClose }: NotificationsPanelProps) {
       {notifications.length > 0 && (
         <div style={{ padding: '0.75rem', borderTop: '1px solid var(--border-subtle)', display: 'flex', gap: '0.5rem', flexShrink: 0 }}>
           {unreadCount > 0 && (
-            <button onClick={markAllAsRead} style={{ flex: 1, background: 'none', border: '1px solid var(--border-subtle)', borderRadius: '8px', color: '#a78bfa', fontSize: '0.75rem', fontWeight: 600, cursor: 'pointer', padding: '0.45rem', fontFamily: 'inherit' }}>
+            <button onClick={markAllAsRead} style={{ flex: 1, background: 'none', border: '1px solid var(--border-subtle)', borderRadius: '8px', color: '#5f5a80', fontSize: '0.75rem', fontWeight: 600, cursor: 'pointer', padding: '0.45rem', fontFamily: 'inherit' }}>
               Mark all read
             </button>
           )}
-          <button onClick={clearAll} style={{ flex: 1, background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.2)', borderRadius: '8px', color: '#f87171', fontSize: '0.75rem', fontWeight: 600, cursor: 'pointer', padding: '0.45rem', fontFamily: 'inherit' }}>
+          <button onClick={clearAll} style={{ flex: 1, background: 'rgba(176,96,79,0.08)', border: '1px solid rgba(176,96,79,0.2)', borderRadius: '8px', color: '#9a5040', fontSize: '0.75rem', fontWeight: 600, cursor: 'pointer', padding: '0.45rem', fontFamily: 'inherit' }}>
             Clear all
           </button>
         </div>

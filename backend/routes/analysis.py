@@ -5,6 +5,8 @@ import asyncio
 from fastapi import APIRouter, HTTPException, Query
 
 from services.location_resolver import DISTRICT_COORDS
+from services.ml_loader import model_status
+from services.structural_inspector import structural_risk_score
 from services.seismic_analysis import code_warnings, seismic_demand, seismic_report, site_of, zone_at
 from services.site_profile import site_profile
 from state.store import store
@@ -43,6 +45,15 @@ async def district_profiles() -> list[dict]:
             return {"district_id": district_id, **await site_profile(*coords)}
 
     return await asyncio.gather(*(one(d, c) for d, c in DISTRICT_COORDS.items()))
+
+@router.get("/analysis/structural-risk")
+async def get_structural_risk() -> dict:
+    """ML structural-risk score (0-1) of the building in the request's workspace, from the trained risk model."""
+    state = store.get()
+    risk = structural_risk_score(state)
+    return {"risk": risk, "model_loaded": model_status()["risk_model"]["loaded"],
+            "district_id": state.constraints.district_id}
+
 
 @router.get("/analysis/seismic-demand")
 async def get_seismic_demand() -> dict:

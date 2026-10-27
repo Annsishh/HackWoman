@@ -20,8 +20,8 @@ interface Drag { id: string; site: boolean; offX: number; offZ: number; rect: Re
 
 const FIELD: React.CSSProperties = {
   width: '100%', boxSizing: 'border-box', padding: '0.45rem 0.6rem',
-  background: 'rgba(255,255,255,0.05)', border: '1px solid var(--border-subtle)',
-  borderRadius: '7px', color: '#f1f5f9', fontSize: '0.8rem',
+  background: 'rgba(60,52,44,0.06)', border: '1px solid var(--border-subtle)',
+  borderRadius: '7px', color: '#2b2926', fontSize: '0.8rem',
 };
 const SECTION_LABEL: React.CSSProperties = {
   fontSize: '0.58rem', fontWeight: 700, letterSpacing: '0.12em', color: 'var(--text-tertiary)', marginBottom: '0.4rem',
@@ -228,15 +228,15 @@ export function FloorPlanEditor({ onClose, initialFloor }: { onClose: () => void
   const suggested = (isSite ? SITE_META[siteType] : roomMeta(roomType)).suggestedSqft;
 
   return (
-    <div style={{ position: 'fixed', inset: 0, zIndex: 900, background: 'rgba(0,0,0,0.65)', backdropFilter: 'blur(6px)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+    <div style={{ position: 'fixed', inset: 0, zIndex: 900, background: 'rgba(60,52,44,0.227)', backdropFilter: 'blur(6px)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
       <div style={{
         width: 'min(1200px, 94vw)', height: 'min(800px, 90vh)', display: 'flex', overflow: 'hidden',
-        background: '#0d0d14', border: '1px solid var(--border-subtle)', borderRadius: '16px', boxShadow: '0 20px 60px rgba(0,0,0,0.5)',
+        background: '#fbfaf7', border: '1px solid var(--border-subtle)', borderRadius: '16px', boxShadow: '0 20px 60px rgba(60,52,44,0.175)',
       }}>
         {/* ── Sidebar ── */}
         <div style={{ width: '290px', flexShrink: 0, borderRight: '1px solid var(--border-subtle)', overflowY: 'auto', padding: '1rem', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
           <div>
-            <div style={{ fontSize: '1rem', fontWeight: 800, color: '#f1f5f9' }}>Floor Plan</div>
+            <div style={{ fontSize: '1rem', fontWeight: 800, color: '#2b2926' }}>Floor Plan</div>
             <div style={{ fontSize: '0.7rem', color: 'var(--text-tertiary)', marginTop: '0.2rem' }}>
               You decide the size and position of every room.
             </div>
@@ -263,7 +263,7 @@ export function FloorPlanEditor({ onClose, initialFloor }: { onClose: () => void
                       onClick={() => (isSite ? setSiteType(t.id as SiteType) : setRoomType(t.id))}
                       style={{
                         padding: '0.35rem 0.2rem', borderRadius: '7px', cursor: 'pointer', fontSize: '0.62rem', fontWeight: 600,
-                        background: active ? `${t.color}26` : 'rgba(255,255,255,0.03)',
+                        background: active ? `${t.color}26` : 'rgba(60,52,44,0.036)',
                         border: `1px solid ${active ? t.color : 'var(--border-subtle)'}`,
                         color: active ? t.color : 'var(--text-secondary)',
                         textTransform: 'capitalize',
@@ -285,14 +285,14 @@ export function FloorPlanEditor({ onClose, initialFloor }: { onClose: () => void
                     <input style={{ ...FIELD, marginTop: '0.2rem' }} type="number" min={MIN_SIDE_FT} placeholder={dims ? String(dims.w) : 'auto'} value={width} onChange={e => setWidth(e.target.value)} />
                   </label>
                 </div>
-                <div style={{ fontSize: '0.66rem', color: formError ? '#f87171' : 'var(--text-tertiary)', minHeight: '1em' }}>
+                <div style={{ fontSize: '0.66rem', color: formError ? '#9a5040' : 'var(--text-tertiary)', minHeight: '1em' }}>
                   {formError ?? (dims ? `→ ${dims.w} × ${dims.d} ft = ${dims.w * dims.d} sq ft` : 'Enter how many sq ft you need.')}
                 </div>
                 <button type="button" onClick={armFromForm} disabled={!dims || !!formError || busy}
                   style={{
                     display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.4rem',
                     padding: '0.55rem', borderRadius: '8px', border: 'none', fontWeight: 700, fontSize: '0.78rem',
-                    background: !dims || formError ? 'rgba(255,255,255,0.06)' : 'linear-gradient(135deg,#7c3aed,#06b6d4)',
+                    background: !dims || formError ? 'rgba(60,52,44,0.072)' : '#5d6b80',
                     color: !dims || formError ? 'var(--text-tertiary)' : '#fff',
                     cursor: !dims || formError ? 'not-allowed' : 'pointer',
                   }}>
@@ -305,7 +305,7 @@ export function FloorPlanEditor({ onClose, initialFloor }: { onClose: () => void
           {/* Rooms added via chat that still need a spot */}
           {unplaced.length > 0 && (
             <div>
-              <div style={{ ...SECTION_LABEL, color: '#fbbf24' }}>WAITING FOR A SPOT ({unplaced.length})</div>
+              <div style={{ ...SECTION_LABEL, color: '#8c6a2f' }}>WAITING FOR A SPOT ({unplaced.length})</div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '0.3rem' }}>
                 {unplaced.map(r => (
                   <UnplacedRow key={r.id} room={r} active={arm?.kind === 'place-room' && arm.roomId === r.id}
@@ -320,7 +320,7 @@ export function FloorPlanEditor({ onClose, initialFloor }: { onClose: () => void
           {(selRoom || selFeature) && !arm && (
             <div style={{ border: '1px solid var(--border-subtle)', borderRadius: '10px', padding: '0.65rem' }}>
               <div style={SECTION_LABEL}>SELECTED</div>
-              <div style={{ fontSize: '0.85rem', fontWeight: 700, color: '#f1f5f9' }}>{(selRoom ?? selFeature)!.name}</div>
+              <div style={{ fontSize: '0.85rem', fontWeight: 700, color: '#2b2926' }}>{(selRoom ?? selFeature)!.name}</div>
               <div style={{ fontSize: '0.7rem', color: 'var(--text-tertiary)', margin: '0.2rem 0 0.55rem' }}>
                 {(selRoom ?? selFeature)!.w} × {(selRoom ?? selFeature)!.d} ft · {(selRoom ?? selFeature)!.area_sqft} sq ft · drag to move
               </div>
@@ -347,7 +347,7 @@ export function FloorPlanEditor({ onClose, initialFloor }: { onClose: () => void
               const pending = f.rooms.some(r => r.x === null);
               return (
                 <TabBtn key={f.id} active={tab === f.number} onClick={() => { setTab(f.number); cancel(); setSelected(null); }}>
-                  Floor {f.number}{pending && <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#fbbf24' }} />}
+                  Floor {f.number}{pending && <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#8c6a2f' }} />}
                 </TabBtn>
               );
             })}
@@ -358,7 +358,7 @@ export function FloorPlanEditor({ onClose, initialFloor }: { onClose: () => void
           </div>
 
           {/* Status line */}
-          <div style={{ padding: '0.45rem 0.9rem', fontSize: '0.72rem', minHeight: '1.2rem', color: error ? '#f87171' : arm ? '#06b6d4' : 'var(--text-tertiary)' }}>
+          <div style={{ padding: '0.45rem 0.9rem', fontSize: '0.72rem', minHeight: '1.2rem', color: error ? '#9a5040' : arm ? '#4f7d78' : 'var(--text-tertiary)' }}>
             {error ?? (arm
               ? `Click where the ${arm.kind === 'new-site' ? arm.type : 'room'} (${arm.w} × ${arm.d} ft) should go. Green = fits, red = blocked. R rotates, Esc cancels.`
               : isSite ? 'Plot plan — the hatched area is the building. Place parking and gardens on the open land.'
@@ -378,28 +378,28 @@ export function FloorPlanEditor({ onClose, initialFloor }: { onClose: () => void
               >
                 <defs>
                   <pattern id="grid1" width="1" height="1" patternUnits="userSpaceOnUse">
-                    <path d="M1 0H0V1" fill="none" stroke="rgba(255,255,255,0.05)" strokeWidth="0.05" />
+                    <path d="M1 0H0V1" fill="none" stroke="rgba(60,52,44,0.06)" strokeWidth="0.05" />
                   </pattern>
                   <pattern id="grid5" width="5" height="5" patternUnits="userSpaceOnUse">
                     <rect width="5" height="5" fill="url(#grid1)" />
-                    <path d="M5 0H0V5" fill="none" stroke="rgba(255,255,255,0.12)" strokeWidth="0.08" />
+                    <path d="M5 0H0V5" fill="none" stroke="rgba(60,52,44,0.144)" strokeWidth="0.08" />
                   </pattern>
                   <pattern id="hatch" width="1.5" height="1.5" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
-                    <rect width="1.5" height="1.5" fill="rgba(148,163,184,0.12)" />
-                    <line x1="0" y1="0" x2="0" y2="1.5" stroke="rgba(148,163,184,0.45)" strokeWidth="0.3" />
+                    <rect width="1.5" height="1.5" fill="rgba(107,102,94,0.12)" />
+                    <line x1="0" y1="0" x2="0" y2="1.5" stroke="rgba(107,102,94,0.45)" strokeWidth="0.3" />
                   </pattern>
                 </defs>
 
                 {isSite ? (
                   <>
-                    <rect x={0} y={0} width={planW} height={planD} fill="rgba(74,124,58,0.18)" stroke="rgba(255,255,255,0.45)" strokeWidth="0.25" strokeDasharray="1 0.6" />
+                    <rect x={0} y={0} width={planW} height={planD} fill="rgba(74,124,58,0.18)" stroke="rgba(60,52,44,0.45)" strokeWidth="0.25" strokeDasharray="1 0.6" />
                     <rect x={0} y={0} width={planW} height={planD} fill="url(#grid5)" pointerEvents="none" />
                     {buildingOnSite.map((p, i) => (
-                      <rect key={i} x={p.x} y={p.z} width={p.w} height={p.d} fill="url(#hatch)" stroke="#94a3b8" strokeWidth="0.2" />
+                      <rect key={i} x={p.x} y={p.z} width={p.w} height={p.d} fill="url(#hatch)" stroke="#6b665e" strokeWidth="0.2" />
                     ))}
                     {buildingOnSite.length > 0 && label(
                       { x: site.building_x, z: site.building_z, w: site.base_width_ft, d: site.base_depth_ft },
-                      'BUILDING', `${footprintArea} sq ft`, '#94a3b8',
+                      'BUILDING', `${footprintArea} sq ft`, '#6b665e',
                     )}
                     {featureRects.map(({ f, rect }) => (
                       <FeatureShape key={f.id} f={f} rect={rect} selected={selected === f.id} armed={!!arm}
@@ -409,7 +409,7 @@ export function FloorPlanEditor({ onClose, initialFloor }: { onClose: () => void
                 ) : floor && (
                   <>
                     {floor.footprint.map((p, i) => (
-                      <rect key={i} x={p.x} y={p.z} width={p.w} height={p.d} fill="rgba(226,232,240,0.06)" />
+                      <rect key={i} x={p.x} y={p.z} width={p.w} height={p.d} fill="rgba(61,58,53,0.06)" />
                     ))}
                     {floor.footprint.map((p, i) => (
                       <rect key={`g${i}`} x={p.x} y={p.z} width={p.w} height={p.d} fill="url(#grid5)" pointerEvents="none" />
@@ -433,8 +433,8 @@ export function FloorPlanEditor({ onClose, initialFloor }: { onClose: () => void
                 {/* Ghost of the thing being placed */}
                 {ghost && (
                   <rect x={ghost.x} y={ghost.z} width={ghost.w} height={ghost.d} rx="0.4" pointerEvents="none"
-                    fill={ghostValid ? 'rgba(16,185,129,0.28)' : 'rgba(239,68,68,0.28)'}
-                    stroke={ghostValid ? '#10b981' : '#ef4444'} strokeWidth="0.3" strokeDasharray="0.8 0.4" />
+                    fill={ghostValid ? 'rgba(92,125,89,0.28)' : 'rgba(176,96,79,0.28)'}
+                    stroke={ghostValid ? '#5c7d59' : '#b0604f'} strokeWidth="0.3" strokeDasharray="0.8 0.4" />
                 )}
 
                 {/* Dimensions + road side marker */}
@@ -460,8 +460,8 @@ function AreaBar({ label, used, total, detail }: { label: string; used: number; 
   return (
     <div>
       <div style={SECTION_LABEL}>{label}</div>
-      <div style={{ height: '6px', borderRadius: '3px', background: 'rgba(255,255,255,0.06)', overflow: 'hidden' }}>
-        <div style={{ width: `${pct}%`, height: '100%', background: pct > 95 ? '#ef4444' : 'linear-gradient(90deg,#7c3aed,#06b6d4)', transition: 'width 0.3s' }} />
+      <div style={{ height: '6px', borderRadius: '3px', background: 'rgba(60,52,44,0.072)', overflow: 'hidden' }}>
+        <div style={{ width: `${pct}%`, height: '100%', background: pct > 95 ? '#b0604f' : 'linear-gradient(90deg, #7d8aa3, #8fa9a2)', transition: 'width 0.3s' }} />
       </div>
       <div style={{ fontSize: '0.66rem', color: 'var(--text-secondary)', marginTop: '0.35rem', lineHeight: 1.5 }}>{detail}</div>
     </div>
@@ -482,7 +482,7 @@ function Outline({ parts }: { parts: Rect[] }) {
       if (!inside(p.x + p.w, z)) segs.push(`M${p.x + p.w} ${z}v1`);
     }
   }
-  return <path d={segs.join('')} stroke="#e2e8f0" strokeWidth="0.45" strokeLinecap="square" fill="none" pointerEvents="none" />;
+  return <path d={segs.join('')} stroke="#8f897f" strokeWidth="0.45" strokeLinecap="square" fill="none" pointerEvents="none" />;
 }
 
 /* Average glyph width of the plan font, as a fraction of the font size (bold sans, emoji ≈ 1.2) */
@@ -513,7 +513,7 @@ function fitLabel(rect: Rect, title: string, sub: string, color: string) {
   return (
     <svg x={rect.x} y={rect.z} width={rect.w} height={rect.d} overflow="hidden" pointerEvents="none">
       <title>{`${title} — ${sub}`}</title>
-      <text x={rect.w / 2} y={titleY} textAnchor="middle" fontSize={fs} fontWeight={700} fill="#f1f5f9">{shown}</text>
+      <text x={rect.w / 2} y={titleY} textAnchor="middle" fontSize={fs} fontWeight={700} fill="#2b2926">{shown}</text>
       {showSub && (
         <text x={rect.w / 2} y={titleY + 0.3 * fs + subFs * 0.95} textAnchor="middle" fontSize={subFs} fontWeight={600} fill={color}>{sub}</text>
       )}
@@ -531,11 +531,11 @@ function FeatureShape({ f, rect, selected, armed, onPointerDown, label }: {
   return (
     <g onPointerDown={onPointerDown} onClick={e => { if (!armed) e.stopPropagation(); }} style={{ cursor: armed ? undefined : 'grab' }}>
       <rect x={rect.x} y={rect.z} width={rect.w} height={rect.d} rx="0.3"
-        fill={f.type === 'parking' ? 'rgba(75,85,99,0.75)' : 'rgba(34,197,94,0.35)'}
+        fill={f.type === 'parking' ? 'rgba(75,85,99,0.75)' : 'rgba(92,125,89,0.35)'}
         stroke={selected ? '#fff' : m.color} strokeWidth={selected ? 0.35 : 0.2} />
       {Array.from({ length: Math.max(0, stalls - 1) }, (_, i) => (rect.w >= rect.d
-        ? <line key={i} x1={rect.x + (i + 1) * 9} y1={rect.z} x2={rect.x + (i + 1) * 9} y2={rect.z + rect.d * 0.6} stroke="#e5e7eb" strokeWidth="0.15" pointerEvents="none" />
-        : <line key={i} x1={rect.x} y1={rect.z + (i + 1) * 9} x2={rect.x + rect.w * 0.6} y2={rect.z + (i + 1) * 9} stroke="#e5e7eb" strokeWidth="0.15" pointerEvents="none" />
+        ? <line key={i} x1={rect.x + (i + 1) * 9} y1={rect.z} x2={rect.x + (i + 1) * 9} y2={rect.z + rect.d * 0.6} stroke="#3d3a35" strokeWidth="0.15" pointerEvents="none" />
+        : <line key={i} x1={rect.x} y1={rect.z + (i + 1) * 9} x2={rect.x + rect.w * 0.6} y2={rect.z + (i + 1) * 9} stroke="#3d3a35" strokeWidth="0.15" pointerEvents="none" />
       ))}
       {label(rect, `${m.symbol} ${f.name}`, `${rect.w}×${rect.d} ft · ${rect.w * rect.d} sq ft`, m.color)}
     </g>
@@ -547,11 +547,11 @@ function UnplacedRow({ room, active, onPlace, onDelete }: { room: Room; active: 
   return (
     <div style={{
       display: 'flex', alignItems: 'center', gap: '0.4rem', padding: '0.35rem 0.5rem', borderRadius: '8px',
-      border: `1px solid ${active ? '#06b6d4' : 'var(--border-subtle)'}`, background: 'rgba(251,191,36,0.05)',
+      border: `1px solid ${active ? '#4f7d78' : 'var(--border-subtle)'}`, background: 'rgba(165,124,58,0.05)',
     }}>
       <span style={{ fontSize: '0.75rem' }}>{m.symbol}</span>
       <div style={{ flex: 1, minWidth: 0 }}>
-        <div style={{ fontSize: '0.72rem', fontWeight: 600, color: '#e2e8f0', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{room.name}</div>
+        <div style={{ fontSize: '0.72rem', fontWeight: 600, color: '#3d3a35', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{room.name}</div>
         <div style={{ fontSize: '0.6rem', color: 'var(--text-tertiary)' }}>{room.area_sqft} sq ft · {room.w}×{room.d} ft</div>
       </div>
       <SmallBtn onClick={onPlace}>Place</SmallBtn>
@@ -565,9 +565,9 @@ function TabBtn({ active, onClick, children }: { active: boolean; onClick: () =>
     <button onClick={onClick} style={{
       display: 'flex', alignItems: 'center', gap: '0.35rem', whiteSpace: 'nowrap',
       padding: '0.35rem 0.7rem', borderRadius: '8px', fontSize: '0.72rem', fontWeight: 600, cursor: 'pointer',
-      background: active ? 'rgba(6,182,212,0.15)' : 'transparent',
-      border: `1px solid ${active ? 'rgba(6,182,212,0.4)' : 'var(--border-subtle)'}`,
-      color: active ? '#06b6d4' : 'var(--text-secondary)',
+      background: active ? 'rgba(79,125,120,0.15)' : 'transparent',
+      border: `1px solid ${active ? 'rgba(79,125,120,0.4)' : 'var(--border-subtle)'}`,
+      color: active ? '#4f7d78' : 'var(--text-secondary)',
     }}>{children}</button>
   );
 }
@@ -577,9 +577,9 @@ function SmallBtn({ onClick, disabled, danger, children }: { onClick: () => void
     <button onClick={onClick} disabled={disabled} style={{
       display: 'flex', alignItems: 'center', gap: '0.3rem', padding: '0.3rem 0.55rem', borderRadius: '6px',
       fontSize: '0.66rem', fontWeight: 600, cursor: disabled ? 'wait' : 'pointer',
-      background: danger ? 'rgba(239,68,68,0.1)' : 'rgba(255,255,255,0.06)',
-      border: `1px solid ${danger ? 'rgba(239,68,68,0.35)' : 'var(--border-subtle)'}`,
-      color: danger ? '#f87171' : 'var(--text-secondary)',
+      background: danger ? 'rgba(176,96,79,0.1)' : 'rgba(60,52,44,0.072)',
+      border: `1px solid ${danger ? 'rgba(176,96,79,0.35)' : 'var(--border-subtle)'}`,
+      color: danger ? '#9a5040' : 'var(--text-secondary)',
     }}>{children}</button>
   );
 }

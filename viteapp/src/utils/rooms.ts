@@ -2,20 +2,20 @@ import type { Rect } from '../context/BuildingContext';
 
 /* ── Room type metadata (shared by the 3D view and the floor-plan editor) ── */
 export const ROOM_META: Record<string, { symbol: string; color: string; label: string; suggestedSqft: number }> = {
-  bedroom:  { symbol: '🛏', color: '#7ecfdf', label: 'BED',  suggestedSqft: 160 },
-  bathroom: { symbol: '🚿', color: '#60a5fa', label: 'BATH', suggestedSqft: 50 },
-  kitchen:  { symbol: '🍳', color: '#fbbf24', label: 'KIT',  suggestedSqft: 100 },
-  living:   { symbol: '🛋', color: '#f472b6', label: 'LIV',  suggestedSqft: 220 },
-  dining:   { symbol: '🍽', color: '#fb7185', label: 'DIN',  suggestedSqft: 120 },
-  hallway:  { symbol: '🚪', color: '#a3e635', label: 'HALL', suggestedSqft: 60 },
-  office:   { symbol: '💼', color: '#c084fc', label: 'OFC',  suggestedSqft: 120 },
-  store:    { symbol: '📦', color: '#f97316', label: 'STR',  suggestedSqft: 40 },
-  general:  { symbol: '◻', color: '#94a3b8', label: 'RM',   suggestedSqft: 120 },
+  bedroom:  { symbol: '🛏', color: '#3f6b66', label: 'BED',  suggestedSqft: 160 },
+  bathroom: { symbol: '🚿', color: '#57729a', label: 'BATH', suggestedSqft: 50 },
+  kitchen:  { symbol: '🍳', color: '#8c6a2f', label: 'KIT',  suggestedSqft: 100 },
+  living:   { symbol: '🛋', color: '#9e5e70', label: 'LIV',  suggestedSqft: 220 },
+  dining:   { symbol: '🍽', color: '#9a5040', label: 'DIN',  suggestedSqft: 120 },
+  hallway:  { symbol: '🚪', color: '#77804e', label: 'HALL', suggestedSqft: 60 },
+  office:   { symbol: '💼', color: '#5f5a80', label: 'OFC',  suggestedSqft: 120 },
+  store:    { symbol: '📦', color: '#a8714a', label: 'STR',  suggestedSqft: 40 },
+  general:  { symbol: '◻', color: '#6b665e', label: 'RM',   suggestedSqft: 120 },
 };
 export const roomMeta = (type: string) => ROOM_META[type] ?? ROOM_META.general;
 
 export const SITE_META: Record<'parking' | 'garden', { symbol: string; color: string; label: string; suggestedSqft: number }> = {
-  parking: { symbol: '🚗', color: '#9ca3af', label: 'PARKING', suggestedSqft: 180 },
+  parking: { symbol: '🚗', color: '#6b665e', label: 'PARKING', suggestedSqft: 180 },
   garden:  { symbol: '🌳', color: '#4ade80', label: 'GARDEN',  suggestedSqft: 200 },
 };
 

@@ -16,9 +16,9 @@ interface Message {
 }
 
 function riskColor(risk: number): string {
-  if (risk >= 0.5) return '#ef4444';
-  if (risk >= 0.25) return '#f59e0b';
-  return '#10b981';
+  if (risk >= 0.5) return '#b0604f';
+  if (risk >= 0.25) return '#a57c3a';
+  return '#5c7d59';
 }
 
 const SESSION_ID = `${Math.floor(Math.random() * 9000 + 1000)}-ARCH`;
@@ -144,10 +144,10 @@ export function ChatPanel() {
   };
 
   const typeColor: Record<string, string> = {
-    success: '#10b981',
-    error: '#ef4444',
-    warning: '#f59e0b',
-    info: '#06b6d4',
+    success: '#5c7d59',
+    error: '#b0604f',
+    warning: '#a57c3a',
+    info: '#4f7d78',
   };
 
   return (
@@ -155,7 +155,7 @@ export function ChatPanel() {
       width: '100%',
       display: 'flex',
       flexDirection: 'column',
-      background: '#0d0d14',
+      background: '#fbfaf7',
       flexShrink: 0,
       height: '100%',
     }}>
@@ -173,7 +173,7 @@ export function ChatPanel() {
             fontSize: '0.65rem',
             fontWeight: 700,
             letterSpacing: '0.12em',
-            color: '#06b6d4',
+            color: '#4f7d78',
           }}>
             AI ARCHITECT ASSISTANT
           </div>
@@ -185,11 +185,11 @@ export function ChatPanel() {
           title="Reset building"
           onClick={handleReset}
           style={{
-            background: 'rgba(239,68,68,0.08)',
-            border: '1px solid rgba(239,68,68,0.2)',
+            background: 'rgba(176,96,79,0.08)',
+            border: '1px solid rgba(176,96,79,0.2)',
             borderRadius: '6px',
             padding: '0.3rem 0.5rem',
-            color: '#ef4444',
+            color: '#b0604f',
             cursor: 'pointer',
             display: 'flex',
             alignItems: 'center',
@@ -218,8 +218,8 @@ export function ChatPanel() {
               /* User bubble */
               <div style={{ display: 'flex', justifyContent: 'flex-end', flexDirection: 'column', alignItems: 'flex-end', gap: '3px' }}>
                 <div style={{
-                  background: 'rgba(124,58,237,0.15)',
-                  border: '1px solid rgba(124,58,237,0.25)',
+                  background: 'rgba(110,104,144,0.15)',
+                  border: '1px solid rgba(110,104,144,0.25)',
                   borderRadius: '12px 12px 4px 12px',
                   padding: '0.6rem 0.85rem',
                   maxWidth: '85%',
@@ -238,9 +238,9 @@ export function ChatPanel() {
               /* AI bubble */
               <div style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
                 <div style={{
-                  background: 'rgba(6,182,212,0.06)',
-                  border: `1px solid ${typeColor[msg.type ?? 'info'] ?? '#06b6d4'}30`,
-                  borderLeft: `3px solid ${typeColor[msg.type ?? 'info'] ?? '#06b6d4'}`,
+                  background: 'rgba(79,125,120,0.06)',
+                  border: `1px solid ${typeColor[msg.type ?? 'info'] ?? '#4f7d78'}30`,
+                  borderLeft: `3px solid ${typeColor[msg.type ?? 'info'] ?? '#4f7d78'}`,
                   borderRadius: '4px 12px 12px 4px',
                   padding: '0.6rem 0.85rem',
                   maxWidth: '92%',
@@ -252,7 +252,7 @@ export function ChatPanel() {
                   {msg.text}
                 </div>
                 <div style={{ fontSize: '0.6rem', color: 'var(--text-tertiary)', display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
-                  <Bot size={10} color="#06b6d4" />
+                  <Bot size={10} color="#4f7d78" />
                   AI CORE • {formatTime(msg.timestamp)}
                 </div>
 
@@ -279,21 +279,21 @@ export function ChatPanel() {
                         key={s}
                         onClick={() => send(s)}
                         style={{
-                          background: 'rgba(124,58,237,0.1)',
-                          border: '1px solid rgba(124,58,237,0.25)',
+                          background: 'rgba(110,104,144,0.1)',
+                          border: '1px solid rgba(110,104,144,0.25)',
                           borderRadius: '20px',
                           padding: '0.25rem 0.65rem',
                           fontSize: '0.7rem',
-                          color: '#a78bfa',
+                          color: '#5f5a80',
                           cursor: 'pointer',
                           transition: 'all 0.15s',
                           transform: 'none',
                         }}
                         onMouseEnter={e => {
-                          (e.currentTarget as HTMLButtonElement).style.background = 'rgba(124,58,237,0.2)';
+                          (e.currentTarget as HTMLButtonElement).style.background = 'rgba(110,104,144,0.2)';
                         }}
                         onMouseLeave={e => {
-                          (e.currentTarget as HTMLButtonElement).style.background = 'rgba(124,58,237,0.1)';
+                          (e.currentTarget as HTMLButtonElement).style.background = 'rgba(110,104,144,0.1)';
                         }}
                       >
                         {s}
@@ -310,9 +310,9 @@ export function ChatPanel() {
         {loading && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
             <div style={{
-              background: 'rgba(6,182,212,0.06)',
-              border: '1px solid rgba(6,182,212,0.2)',
-              borderLeft: '3px solid #06b6d4',
+              background: 'rgba(79,125,120,0.06)',
+              border: '1px solid rgba(79,125,120,0.2)',
+              borderLeft: '3px solid #4f7d78',
               borderRadius: '4px 12px 12px 4px',
               padding: '0.6rem 0.85rem',
               display: 'flex',
@@ -343,7 +343,7 @@ export function ChatPanel() {
             key={action}
             onClick={() => send(action)}
             style={{
-              background: 'rgba(255,255,255,0.04)',
+              background: 'rgba(60,52,44,0.048)',
               border: '1px solid var(--border-subtle)',
               borderRadius: '4px',
               padding: '0.2rem 0.5rem',
@@ -358,7 +358,7 @@ export function ChatPanel() {
             }}
             onMouseEnter={e => {
               (e.currentTarget as HTMLButtonElement).style.color = 'var(--text-primary)';
-              (e.currentTarget as HTMLButtonElement).style.borderColor = 'rgba(124,58,237,0.4)';
+              (e.currentTarget as HTMLButtonElement).style.borderColor = 'rgba(110,104,144,0.4)';
             }}
             onMouseLeave={e => {
               (e.currentTarget as HTMLButtonElement).style.color = 'var(--text-secondary)';
@@ -381,7 +381,7 @@ export function ChatPanel() {
           display: 'flex',
           alignItems: 'flex-end',
           gap: '0.5rem',
-          background: 'rgba(255,255,255,0.04)',
+          background: 'rgba(60,52,44,0.048)',
           border: '1px solid var(--border-subtle)',
           borderRadius: '10px',
           padding: '0.5rem 0.75rem',
@@ -414,7 +414,7 @@ export function ChatPanel() {
             onClick={() => send(input)}
             disabled={!input.trim() || loading}
             style={{
-              background: input.trim() && !loading ? '#7c3aed' : 'rgba(255,255,255,0.05)',
+              background: input.trim() && !loading ? '#6e6890' : 'rgba(60,52,44,0.06)',
               border: 'none',
               borderRadius: '7px',
               padding: '0.4rem 0.5rem',

@@ -43,7 +43,7 @@ export function SiteCard() {
 
       {loc ? (
         <div style={{ fontSize: '0.7rem', lineHeight: 1.45 }}>
-          <div style={{ color: '#f1f5f9', fontWeight: 600 }} title={loc.address}>
+          <div style={{ color: '#2b2926', fontWeight: 600 }} title={loc.address}>
             {loc.address ? loc.address.split(',').slice(0, 2).join(',') : `${loc.lat.toFixed(4)}, ${loc.lng.toFixed(4)}`}
           </div>
           <div style={{ color: 'var(--text-secondary)' }}>
@@ -53,7 +53,7 @@ export function SiteCard() {
             {loc.lat.toFixed(4)}° N, {loc.lng.toFixed(4)}° E
           </div>
           {(loc.approximated || !loc.in_karnataka || loc.offline) && (
-            <div style={{ color: '#f59e0b', fontSize: '0.62rem', marginTop: '0.2rem' }}>
+            <div style={{ color: '#a57c3a', fontSize: '0.62rem', marginTop: '0.2rem' }}>
               {!loc.in_karnataka
                 ? 'Outside Karnataka — using the nearest supported district'
                 : loc.offline
@@ -75,14 +75,14 @@ export function SiteCard() {
           onKeyDown={e => { if (e.key === 'Enter') search(); }}
           placeholder="Town, place or lat, lng"
           disabled={busy}
-          style={{ flex: 1, minWidth: 0, background: 'rgba(255,255,255,0.04)', border: '1px solid var(--border-subtle)', borderRadius: '6px', padding: '0.35rem 0.5rem', fontSize: '0.68rem', color: 'var(--text-primary)' }}
+          style={{ flex: 1, minWidth: 0, background: 'rgba(60,52,44,0.048)', border: '1px solid var(--border-subtle)', borderRadius: '6px', padding: '0.35rem 0.5rem', fontSize: '0.68rem', color: 'var(--text-primary)' }}
         />
         <IconBtn title="Search" onClick={search} disabled={busy || !query.trim()}><Search size={12} /></IconBtn>
         <IconBtn title="Use my current location" onClick={useMyLocation} disabled={busy}><Crosshair size={12} /></IconBtn>
       </div>
       {busy && <div style={{ fontSize: '0.6rem', color: 'var(--text-tertiary)', marginTop: '0.3rem' }}>Locating…</div>}
       {note && note.text && (
-        <div style={{ fontSize: '0.6rem', marginTop: '0.3rem', color: note.tone === 'ok' ? 'var(--text-secondary)' : '#f59e0b' }}>{note.text}</div>
+        <div style={{ fontSize: '0.6rem', marginTop: '0.3rem', color: note.tone === 'ok' ? 'var(--text-secondary)' : '#a57c3a' }}>{note.text}</div>
       )}
     </div>
   );
@@ -93,7 +93,7 @@ function IconBtn({ children, title, onClick, disabled }: { children: React.React
     <button
       title={title} aria-label={title} onClick={onClick} disabled={disabled}
       // padding: 0 overrides the global button padding, which leaves no room for the icon
-      style={{ width: '28px', padding: 0, flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(6,182,212,0.1)', border: '1px solid rgba(6,182,212,0.25)', borderRadius: '6px', color: '#06b6d4', cursor: disabled ? 'default' : 'pointer', opacity: disabled ? 0.5 : 1 }}
+      style={{ width: '28px', padding: 0, flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(79,125,120,0.1)', border: '1px solid rgba(79,125,120,0.25)', borderRadius: '6px', color: '#4f7d78', cursor: disabled ? 'default' : 'pointer', opacity: disabled ? 0.5 : 1 }}
     >
       {children}
     </button>

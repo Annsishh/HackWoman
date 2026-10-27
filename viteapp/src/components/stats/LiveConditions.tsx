@@ -47,7 +47,7 @@ export function LiveConditions() {
   return (
     <div>
       <div style={{ display: 'flex', alignItems: 'center', marginBottom: '0.6rem' }}>
-        <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: w ? '#10b981' : '#6b7280', marginRight: '0.4rem', animation: w ? 'livePulse 2s infinite' : undefined }} />
+        <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: w ? '#5c7d59' : '#8f897f', marginRight: '0.4rem', animation: w ? 'livePulse 2s infinite' : undefined }} />
         <span style={{ fontSize: '0.6rem', fontWeight: 700, letterSpacing: '0.12em', color: 'var(--text-tertiary)' }}>
           LIVE · {district.name.toUpperCase()}
         </span>
@@ -61,18 +61,18 @@ export function LiveConditions() {
 
       {data && (
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.45rem' }}>
-          <Tile icon={<Thermometer size={11} />} color="#f59e0b" label="TEMP"
+          <Tile icon={<Thermometer size={11} />} color="#a57c3a" label="TEMP"
             value={w ? `${w.temperatureC.toFixed(1)}°C` : '—'}
             sub={w ? `${w.humidityPct}% RH${climate ? ` · hot day ${climate.hotDayC}°C` : ''}` : 'unavailable'}
             warn={!!w && !!climate && w.temperatureC >= climate.hotDayC} />
-          <Tile icon={<Wind size={11} />} color="#06b6d4" label="WIND"
+          <Tile icon={<Wind size={11} />} color="#4f7d78" label="WIND"
             value={w ? `${Math.round(w.windKmh)} km/h` : '—'}
             sub={w ? `gust ${Math.round(w.gustKmh)}${gustVsRecord !== null ? ` · ${gustVsRecord}% of record` : ''}` : 'unavailable'}
             warn={gustVsRecord !== null && gustVsRecord >= 80} />
-          <Tile icon={<Sun size={11} />} color="#fbbf24" label="SOLAR"
+          <Tile icon={<Sun size={11} />} color="#8c6a2f" label="SOLAR"
             value={w ? `${Math.round(w.solarWm2)} W/m²` : '—'}
             sub={climate ? `avg daily peak ${climate.avgPeakSolarWm2} W/m²` : w ? 'baseline unavailable' : 'unavailable'} />
-          <Tile icon={<Activity size={11} />} color="#ef4444" label="QUAKES"
+          <Tile icon={<Activity size={11} />} color="#b0604f" label="QUAKES"
             value={quakes ? String(quakes.length) : '—'}
             sub={quakes
               ? (strongest ? `max M${strongest.magnitude.toFixed(1)}, ${strongest.distanceKm} km` : `none ≥M2 in ${QUAKE_SEARCH.radiusKm} km`)
@@ -86,7 +86,7 @@ export function LiveConditions() {
           {quakes.slice(0, 3).map(q => (
             <a key={q.id} href={q.url} target="_blank" rel="noreferrer"
               style={{ fontSize: '0.6rem', color: 'var(--text-secondary)', textDecoration: 'none', display: 'flex', gap: '0.35rem' }}>
-              <b style={{ color: q.magnitude >= 4 ? '#ef4444' : '#f59e0b' }}>M{q.magnitude.toFixed(1)}</b>
+              <b style={{ color: q.magnitude >= 4 ? '#b0604f' : '#a57c3a' }}>M{q.magnitude.toFixed(1)}</b>
               <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{q.place}</span>
               <span style={{ color: 'var(--text-tertiary)' }}>{new Date(q.time).toLocaleDateString()}</span>
             </a>
@@ -112,14 +112,14 @@ function Tile({ icon, color, label, value, sub, warn }: {
 }) {
   return (
     <div style={{
-      background: warn ? 'rgba(239,68,68,0.08)' : 'rgba(255,255,255,0.03)',
-      border: `1px solid ${warn ? 'rgba(239,68,68,0.4)' : 'var(--border-subtle)'}`,
+      background: warn ? 'rgba(176,96,79,0.08)' : 'rgba(60,52,44,0.036)',
+      border: `1px solid ${warn ? 'rgba(176,96,79,0.4)' : 'var(--border-subtle)'}`,
       borderRadius: '8px', padding: '0.45rem 0.5rem',
     }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', fontSize: '0.55rem', fontWeight: 700, letterSpacing: '0.1em', color }}>
         {icon} {label}
       </div>
-      <div style={{ fontSize: '0.95rem', fontWeight: 800, color: '#f1f5f9', marginTop: '0.15rem' }}>{value}</div>
+      <div style={{ fontSize: '0.95rem', fontWeight: 800, color: '#2b2926', marginTop: '0.15rem' }}>{value}</div>
       <div style={{ fontSize: '0.56rem', color: 'var(--text-tertiary)', marginTop: '0.1rem', lineHeight: 1.3 }}>{sub}</div>
     </div>
   );

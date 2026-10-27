@@ -53,7 +53,7 @@ export function TopNav({ currentPage, onNavigate, onOpenProfile }: TopNavProps) 
       {/* Logo */}
       <button onClick={() => onNavigate('home')} style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer', display: 'flex', alignItems: 'center', transform: 'none' }}>
         <span style={{ fontWeight: 800, fontSize: '1.15rem', letterSpacing: '0.04em', color: 'var(--text-primary)' }}>
-          निर्माण <span style={{ color: '#06b6d4' }}>AI</span>
+          निर्माण <span style={{ color: '#4f7d78' }}>AI</span>
         </span>
       </button>
 
@@ -64,13 +64,13 @@ export function TopNav({ currentPage, onNavigate, onOpenProfile }: TopNavProps) 
           style={{
             display: 'inline-flex', alignItems: 'center', gap: '0.35rem',
             fontSize: '0.62rem', fontWeight: 700,
-            color: modelLoaded ? '#10b981' : '#f59e0b',
-            background: modelLoaded ? 'rgba(16,185,129,0.1)' : 'rgba(245,158,11,0.1)',
-            border: `1px solid ${modelLoaded ? 'rgba(16,185,129,0.3)' : 'rgba(245,158,11,0.3)'}`,
+            color: modelLoaded ? '#5c7d59' : '#a57c3a',
+            background: modelLoaded ? 'rgba(92,125,89,0.1)' : 'rgba(165,124,58,0.1)',
+            border: `1px solid ${modelLoaded ? 'rgba(92,125,89,0.3)' : 'rgba(165,124,58,0.3)'}`,
             borderRadius: '20px', padding: '0.2rem 0.65rem', whiteSpace: 'nowrap',
           }}
         >
-          <span style={{ width: '5px', height: '5px', borderRadius: '50%', background: modelLoaded ? '#10b981' : '#f59e0b' }} />
+          <span style={{ width: '5px', height: '5px', borderRadius: '50%', background: modelLoaded ? '#5c7d59' : '#a57c3a' }} />
           {modelLoaded ? 'Model Loaded' : 'Fallback Mode'}
         </span>
       )}
@@ -79,9 +79,9 @@ export function TopNav({ currentPage, onNavigate, onOpenProfile }: TopNavProps) 
       <nav style={{ display: 'flex', gap: '0.25rem' }}>
         {navLinks.map(({ label, page }) => (
           <button key={page} onClick={() => onNavigate(page)} style={{
-            background: currentPage === page ? 'rgba(124,58,237,0.15)' : 'none',
-            border: currentPage === page ? '1px solid rgba(124,58,237,0.4)' : '1px solid transparent',
-            color: currentPage === page ? '#a78bfa' : 'var(--text-secondary)',
+            background: currentPage === page ? 'rgba(110,104,144,0.15)' : 'none',
+            border: currentPage === page ? '1px solid rgba(110,104,144,0.4)' : '1px solid transparent',
+            color: currentPage === page ? '#5f5a80' : 'var(--text-secondary)',
             padding: '0.4rem 1rem', fontSize: '0.875rem', fontWeight: 500,
             borderRadius: '6px', cursor: 'pointer', transition: 'all 0.2s', transform: 'none',
           }}
@@ -104,27 +104,27 @@ export function TopNav({ currentPage, onNavigate, onOpenProfile }: TopNavProps) 
 
         {/* Settings */}
         <button onClick={() => togglePanel('settings')} style={{
-          background: openPanel === 'settings' ? 'rgba(124,58,237,0.15)' : 'var(--bg-secondary)',
-          border: openPanel === 'settings' ? '1px solid rgba(124,58,237,0.4)' : '1px solid var(--border-subtle)',
+          background: openPanel === 'settings' ? 'rgba(110,104,144,0.15)' : 'var(--bg-secondary)',
+          border: openPanel === 'settings' ? '1px solid rgba(110,104,144,0.4)' : '1px solid var(--border-subtle)',
           borderRadius: '8px', padding: '0.45rem', cursor: 'pointer',
           display: 'flex', alignItems: 'center', justifyContent: 'center', transform: 'none',
-          color: openPanel === 'settings' ? '#a78bfa' : 'var(--text-secondary)', transition: 'all 0.15s',
+          color: openPanel === 'settings' ? '#5f5a80' : 'var(--text-secondary)', transition: 'all 0.15s',
         }}>
           <Settings size={16} />
         </button>
 
         {/* Bell */}
         <button onClick={() => togglePanel('notifications')} style={{
-          background: openPanel === 'notifications' ? 'rgba(239,68,68,0.1)' : 'var(--bg-secondary)',
-          border: openPanel === 'notifications' ? '1px solid rgba(239,68,68,0.3)' : '1px solid var(--border-subtle)',
+          background: openPanel === 'notifications' ? 'rgba(176,96,79,0.1)' : 'var(--bg-secondary)',
+          border: openPanel === 'notifications' ? '1px solid rgba(176,96,79,0.3)' : '1px solid var(--border-subtle)',
           borderRadius: '8px', padding: '0.45rem', cursor: 'pointer',
           display: 'flex', alignItems: 'center', justifyContent: 'center', transform: 'none',
-          color: openPanel === 'notifications' ? '#f87171' : 'var(--text-secondary)',
+          color: openPanel === 'notifications' ? '#9a5040' : 'var(--text-secondary)',
           position: 'relative', transition: 'all 0.15s',
         }}>
           <Bell size={16} />
           {unreadCount > 0 && (
-            <span style={{ position: 'absolute', top: '3px', right: '3px', minWidth: '14px', height: '14px', background: '#ef4444', borderRadius: '20px', border: '1px solid var(--bg-primary)', fontSize: '0.5rem', fontWeight: 800, color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '0 3px' }}>
+            <span style={{ position: 'absolute', top: '3px', right: '3px', minWidth: '14px', height: '14px', background: '#b0604f', borderRadius: '20px', border: '1px solid var(--bg-primary)', fontSize: '0.5rem', fontWeight: 800, color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '0 3px' }}>
               {unreadCount > 9 ? '9+' : unreadCount}
             </span>
           )}
@@ -134,8 +134,8 @@ export function TopNav({ currentPage, onNavigate, onOpenProfile }: TopNavProps) 
         <div style={{ position: 'relative' }}>
           <button onClick={() => togglePanel('profile')} style={{
             width: '32px', height: '32px', borderRadius: '50%',
-            border: openPanel === 'profile' ? '2px solid #a78bfa' : '2px solid transparent',
-            background: user?.photoURL ? 'transparent' : 'linear-gradient(135deg,#7c3aed,#06b6d4)',
+            border: openPanel === 'profile' ? '2px solid #5f5a80' : '2px solid transparent',
+            background: user?.photoURL ? 'transparent' : '#5d6b80',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
             fontSize: '0.75rem', fontWeight: 700, color: '#fff',
             cursor: 'pointer', transition: 'border-color 0.15s', overflow: 'hidden', padding: 0,

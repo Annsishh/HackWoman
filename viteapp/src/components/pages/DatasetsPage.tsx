@@ -2,38 +2,38 @@ import { Database, Wind, Zap, Thermometer, Activity } from 'lucide-react';
 import { KARNATAKA_DISTRICTS } from '../../data/karnataka_db';
 
 const REGION_COLORS: Record<string, string> = {
-  'South Karnataka':        '#7c3aed',
-  'North Karnataka':        '#f59e0b',
-  'Coastal Karnataka':      '#06b6d4',
-  'Hyderabad Karnataka':    '#f97316',
-  'Malnad / Western Ghats': '#10b981',
+  'South Karnataka':        '#6e6890',
+  'North Karnataka':        '#a57c3a',
+  'Coastal Karnataka':      '#4f7d78',
+  'Hyderabad Karnataka':    '#a8714a',
+  'Malnad / Western Ghats': '#5c7d59',
 };
 
 const RISK_COLORS: Record<string, string> = {
-  Low:      '#10b981',
-  Moderate: '#f59e0b',
-  High:     '#ef4444',
+  Low:      '#5c7d59',
+  Moderate: '#a57c3a',
+  High:     '#b0604f',
 };
 
 const ZONE_COLORS: Record<string, string> = {
-  'II':  '#10b981',
-  'III': '#f59e0b',
-  'IV':  '#ef4444',
+  'II':  '#5c7d59',
+  'III': '#a57c3a',
+  'IV':  '#b0604f',
 };
 
 const CLIMATE_COLORS: Record<string, string> = {
-  'Hot-Dry':   '#ef4444',
-  'Hot-Humid': '#06b6d4',
-  'Composite': '#7c3aed',
-  'Temperate': '#10b981',
+  'Hot-Dry':   '#b0604f',
+  'Hot-Humid': '#4f7d78',
+  'Composite': '#6e6890',
+  'Temperate': '#5c7d59',
 };
 
 function WindBar({ value }: { value: number }) {
   const pct = (value / 10) * 100;
-  const color = value < 4 ? '#10b981' : value < 6 ? '#f59e0b' : '#ef4444';
+  const color = value < 4 ? '#5c7d59' : value < 6 ? '#a57c3a' : '#b0604f';
   return (
     <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-      <div style={{ width: '60px', height: '4px', background: 'rgba(255,255,255,0.08)', borderRadius: '2px', overflow: 'hidden' }}>
+      <div style={{ width: '60px', height: '4px', background: 'rgba(60,52,44,0.096)', borderRadius: '2px', overflow: 'hidden' }}>
         <div style={{ width: `${pct}%`, height: '100%', background: color, borderRadius: '2px' }} />
       </div>
       <span style={{ fontSize: '0.72rem', color: 'var(--text-secondary)' }}>{value.toFixed(1)}</span>
@@ -42,10 +42,10 @@ function WindBar({ value }: { value: number }) {
 }
 
 function GridBar({ value }: { value: number }) {
-  const color = value >= 95 ? '#10b981' : value >= 90 ? '#f59e0b' : '#ef4444';
+  const color = value >= 95 ? '#5c7d59' : value >= 90 ? '#a57c3a' : '#b0604f';
   return (
     <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-      <div style={{ width: '60px', height: '4px', background: 'rgba(255,255,255,0.08)', borderRadius: '2px', overflow: 'hidden' }}>
+      <div style={{ width: '60px', height: '4px', background: 'rgba(60,52,44,0.096)', borderRadius: '2px', overflow: 'hidden' }}>
         <div style={{ width: `${value}%`, height: '100%', background: color, borderRadius: '2px' }} />
       </div>
       <span style={{ fontSize: '0.72rem', color: 'var(--text-secondary)' }}>{value}%</span>
@@ -75,10 +75,10 @@ export function DatasetsPage() {
         </div>
         <div style={{ display: 'flex', gap: '0.5rem' }}>
           {[
-            { icon: <Activity size={11} />, label: 'Seismic', color: '#ef4444' },
-            { icon: <Thermometer size={11} />, label: 'Thermal', color: '#f59e0b' },
-            { icon: <Wind size={11} />, label: 'Wind', color: '#06b6d4' },
-            { icon: <Zap size={11} />, label: 'Electrical', color: '#10b981' },
+            { icon: <Activity size={11} />, label: 'Seismic', color: '#b0604f' },
+            { icon: <Thermometer size={11} />, label: 'Thermal', color: '#a57c3a' },
+            { icon: <Wind size={11} />, label: 'Wind', color: '#4f7d78' },
+            { icon: <Zap size={11} />, label: 'Electrical', color: '#5c7d59' },
           ].map(({ icon, label, color }) => (
             <div key={label} style={{
               display: 'flex', alignItems: 'center', gap: '0.3rem',
@@ -109,7 +109,7 @@ export function DatasetsPage() {
                 <tr
                   key={d.id}
                   style={{ borderBottom: '1px solid var(--border-subtle)', cursor: 'pointer', transition: 'background 0.15s' }}
-                  onMouseEnter={e => (e.currentTarget as HTMLTableRowElement).style.background = 'rgba(255,255,255,0.02)'}
+                  onMouseEnter={e => (e.currentTarget as HTMLTableRowElement).style.background = 'rgba(60,52,44,0.024)'}
                   onMouseLeave={e => (e.currentTarget as HTMLTableRowElement).style.background = 'transparent'}
                 >
                   {/* District */}

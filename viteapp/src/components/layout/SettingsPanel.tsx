@@ -12,13 +12,13 @@ function Toggle({ value, onChange }: { value: boolean; onChange: (v: boolean) =>
     <button onClick={() => onChange(!value)} style={{
       width: '36px', height: '20px', borderRadius: '10px', border: 'none', cursor: 'pointer',
       position: 'relative', flexShrink: 0,
-      background: value ? 'linear-gradient(135deg,#7c3aed,#06b6d4)' : 'var(--bg-tertiary)',
+      background: value ? '#5d6b80' : 'var(--bg-tertiary)',
       transition: 'background 0.2s',
     }}>
       <div style={{
         position: 'absolute', top: '2px', left: value ? '18px' : '2px',
         width: '16px', height: '16px', borderRadius: '50%', background: '#fff',
-        transition: 'left 0.2s', boxShadow: '0 1px 4px rgba(0,0,0,0.3)',
+        transition: 'left 0.2s', boxShadow: '0 1px 4px rgba(60,52,44,0.105)',
       }} />
     </button>
   );
@@ -144,7 +144,7 @@ export function SettingsPanel({ onClose }: SettingsPanelProps) {
             icon={<Shield size={15} />}
             label="Signed in as"
             subtitle={user?.email ?? 'Not logged in'}
-            right={<span style={{ fontSize: '0.65rem', color: '#10b981', fontWeight: 600 }}>Active</span>}
+            right={<span style={{ fontSize: '0.65rem', color: '#5c7d59', fontWeight: 600 }}>Active</span>}
           />
           <SettingRow
             icon={<Info size={15} />}
@@ -155,7 +155,7 @@ export function SettingsPanel({ onClose }: SettingsPanelProps) {
       </div>
 
       <div style={{ padding: '0.85rem 1.1rem', borderTop: '1px solid var(--border-subtle)', flexShrink: 0 }}>
-        <button onClick={onClose} style={{ width: '100%', padding: '0.6rem', background: 'linear-gradient(135deg,#7c3aed,#06b6d4)', border: 'none', borderRadius: '8px', color: '#fff', fontSize: '0.8rem', fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>
+        <button onClick={onClose} style={{ width: '100%', padding: '0.6rem', background: '#5d6b80', border: 'none', borderRadius: '8px', color: '#fff', fontSize: '0.8rem', fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>
           Save Changes
         </button>
       </div>

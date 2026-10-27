@@ -13,16 +13,16 @@ import type { Floor, Room, Rect, SiteFeature, WindowSpec } from '../../context/B
 
 /* ── Palette ── */
 const PALETTE = [
-  { top: '#3d7a8a', front: '#205060', side: '#163a47', back: '#102e38', bottom: '#0a1e26', label: '#7ecfdf' },
-  { top: '#3d5a4c', front: '#243d30', side: '#162819', back: '#0e1c12', bottom: '#081008', label: '#6db88e' },
-  { top: '#7a3a50', front: '#521e30', side: '#3a1220', back: '#220a14', bottom: '#140608', label: '#d4849a' },
-  { top: '#6a5a2a', front: '#463a14', side: '#2e250a', back: '#1a1506', bottom: '#100d04', label: '#d4b86a' },
-  { top: '#3a3a8a', front: '#222260', side: '#141440', back: '#0c0c28', bottom: '#080818', label: '#8a8ad4' },
-  { top: '#6a2a8a', front: '#461460', side: '#2c0a40', back: '#1a0628', bottom: '#100418', label: '#b88ad4' },
-  { top: '#2a7a5a', front: '#145a38', side: '#0a3a22', back: '#062214', bottom: '#04140c', label: '#5ad4a8' },
-  { top: '#7a4a2a', front: '#543010', side: '#361e08', back: '#201206', bottom: '#140c04', label: '#d49a5a' },
-  { top: '#2a5a7a', front: '#143a5a', side: '#0a2438', back: '#061626', bottom: '#041018', label: '#5aaad4' },
-  { top: '#7a2a4a', front: '#52142c', side: '#360a1a', back: '#200610', bottom: '#14040a', label: '#d45a8a' },
+  { top: '#e4eaec', front: '#d9e1e2', side: '#bcc5c8', back: '#a7b1b4', bottom: '#879397', label: '#44626a' },
+  { top: '#e4ece8', front: '#d9e2de', side: '#bcc8c2', back: '#a7b4ae', bottom: '#87978f', label: '#446a58' },
+  { top: '#ece4e7', front: '#e2d9dc', side: '#c8bcc0', back: '#b4a7ab', bottom: '#97878c', label: '#6a4450' },
+  { top: '#eceae4', front: '#e2e0d9', side: '#c8c5bc', back: '#b4b1a7', bottom: '#979387', label: '#6a6044' },
+  { top: '#e4e4ec', front: '#d9d9e2', side: '#bcbcc8', back: '#a7a7b4', bottom: '#878797', label: '#44446a' },
+  { top: '#e9e4ec', front: '#dfd9e2', side: '#c4bcc8', back: '#b0a7b4', bottom: '#928797', label: '#5d446a' },
+  { top: '#e4ece9', front: '#d9e2df', side: '#bcc8c3', back: '#a7b4af', bottom: '#879790', label: '#446a5a' },
+  { top: '#ece7e4', front: '#e2ddd9', side: '#c8c1bc', back: '#b4aca7', bottom: '#978d87', label: '#6a5344' },
+  { top: '#e4e9ec', front: '#d9dfe2', side: '#bcc3c8', back: '#a7afb4', bottom: '#879097', label: '#445a6a' },
+  { top: '#ece4e7', front: '#e2d9dd', side: '#c8bcc1', back: '#b4a7ac', bottom: '#97878d', label: '#6a4453' },
 ];
 const pc = (i: number) => PALETTE[i % PALETTE.length];
 
@@ -209,15 +209,15 @@ function FacadeRun({ run, k, H, colors, windows, hasDoor, children }: {
       {ww > 2 && lefts.map((left, i) => (
         <div key={i} style={{
           position: 'absolute', left: `${left}px`, bottom: `${bottom}px`, width: `${ww}px`, height: `${wh}px`,
-          boxSizing: 'border-box', border: '1.5px solid #e2e8f0', borderRadius: '1px',
-          background: `linear-gradient(135deg, rgba(224,242,254,0.75) 0%, rgba(125,211,252,0.45) 35%, ${tint}55 60%, rgba(14,116,144,0.6) 100%)`,
-          boxShadow: '0 1px 0 #94a3b8, inset 0 0 4px rgba(255,255,255,0.35)',
+          boxSizing: 'border-box', border: '1.5px solid #5a554d', borderRadius: '1px',
+          background: `linear-gradient(135deg, rgba(221,230,236,0.75) 0%, rgba(180,196,216,0.45) 35%, ${tint}55 60%, rgba(95,127,124,0.6) 100%)`,
+          boxShadow: '0 1px 0 #8f897f, inset 0 0 4px rgba(255,255,255,0.35)',
         }}>
           {/* mullion + transom */}
-          {ww > 10 && <div style={{ position: 'absolute', top: 0, bottom: 0, left: '50%', width: '1px', background: '#e2e8f0' }} />}
-          {wh > 14 && <div style={{ position: 'absolute', left: 0, right: 0, top: '32%', height: '1px', background: '#e2e8f0' }} />}
+          {ww > 10 && <div style={{ position: 'absolute', top: 0, bottom: 0, left: '50%', width: '1px', background: '#5a554d' }} />}
+          {wh > 14 && <div style={{ position: 'absolute', left: 0, right: 0, top: '32%', height: '1px', background: '#5a554d' }} />}
           {/* sill ledge */}
-          <div style={{ position: 'absolute', left: '-2px', right: '-2px', bottom: '-3px', height: '2px', background: '#cbd5e1' }} />
+          <div style={{ position: 'absolute', left: '-2px', right: '-2px', bottom: '-3px', height: '2px', background: '#8f897f' }} />
         </div>
       ))}
       {children}
@@ -306,7 +306,7 @@ function PyramidRoof({ fp, k, H, colors }: { fp: Rect[]; k: number; H: number; c
 function Partition({ len, H }: { len: number; H: number }) {
   const wall: React.CSSProperties = {
     position: 'absolute',
-    background: 'linear-gradient(180deg, rgba(226,232,240,0.62), rgba(148,163,184,0.5))',
+    background: 'linear-gradient(180deg, rgba(221,216,207,0.62), rgba(168,163,154,0.5))',
     boxShadow: 'inset 0 0 0 1px rgba(255,255,255,0.18)',
   };
   if (len < DOOR_W * 2.2) return <div style={{ ...wall, inset: 0 }} />;
@@ -369,10 +369,10 @@ function FloorBlock({ floor, index, isTop, plan, pointedRoof, wallsPulse, wallLa
         <div key={i} style={{
           ...flat(p.x * k, 0, p.z * k, p.w * k, p.d * k),
           background: plan
-            ? `linear-gradient(rgba(15,23,42,0.16) 1px, transparent 1px) ${-p.x * k}px ${-p.z * k}px / ${grid}px ${grid}px,
-               linear-gradient(90deg, rgba(15,23,42,0.16) 1px, transparent 1px) ${-p.x * k}px ${-p.z * k}px / ${grid}px ${grid}px,
+            ? `linear-gradient(rgba(28,28,30,0.16) 1px, transparent 1px) ${-p.x * k}px ${-p.z * k}px / ${grid}px ${grid}px,
+               linear-gradient(90deg, rgba(28,28,30,0.16) 1px, transparent 1px) ${-p.x * k}px ${-p.z * k}px / ${grid}px ${grid}px,
                #dfe6ee`
-            : `linear-gradient(135deg, #39424d, #222830)`,
+            : `linear-gradient(135deg, #ddd7cd, #cbc4b8)`,
         }} />
       ))}
 
@@ -389,7 +389,7 @@ function FloorBlock({ floor, index, isTop, plan, pointedRoof, wallsPulse, wallLa
           }}>
             {plan ? (
               // Name painted on the floor, so the top view reads like a plan drawing
-              <div style={{ textAlign: 'center', color: '#0f172a', lineHeight: 1.15, maxWidth: '100%', padding: '0 2px', fontSize: `${Math.max(5, Math.min(8, r.w * k * 0.09))}px` }}>
+              <div style={{ textAlign: 'center', color: '#1c1c1e', lineHeight: 1.15, maxWidth: '100%', padding: '0 2px', fontSize: `${Math.max(5, Math.min(8, r.w * k * 0.09))}px` }}>
                 <div style={{ fontWeight: 800, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{meta.symbol} {r.name}</div>
                 <div style={{ fontWeight: 600, opacity: 0.8 }}>{r.w}×{r.d} ft</div>
               </div>
@@ -442,20 +442,20 @@ function FloorBlock({ floor, index, isTop, plan, pointedRoof, wallsPulse, wallLa
       ))}
       {int.map((p, i) => (
         <WallBody key={`wi${i}`} axis={p.axis} x={p.x * k} z={p.z * k} len={p.len * k} t={intT} H={H} inward={0}
-          cap="#e2e8f0" face={null} pulse={wallsPulse} />
+          cap="#ddd8cf" face={null} pulse={wallsPulse} />
       ))}
 
       {/* Terrace over the part of this floor the floor above doesn't cover */}
       {terrace?.slabs.map((p, i) => (
         <div key={`ts${i}`} style={{
           ...flat(p.x * k, -H, p.z * k, p.w * k, p.d * k),
-          background: 'linear-gradient(135deg, #8a94a0, #5c6670)',
+          background: 'linear-gradient(135deg, #b3ada3, #958e83)',
         }} />
       ))}
       {terrace?.edges.map((run, i) => (
         <div key={`tp${i}`} style={{
           ...(run.axis === 'x' ? wallX(run.x * k, -H - ROOF_H, run.z * k, run.len * k, ROOF_H) : wallZ(run.x * k, -H - ROOF_H, run.z * k, run.len * k, ROOF_H)),
-          background: 'linear-gradient(180deg, #6b747e, #3f464d)',
+          background: 'linear-gradient(180deg, #a8a297, #847d72)',
           filter: `brightness(${FACING_LIGHT[run.facing]})`,
         }} />
       ))}
@@ -468,12 +468,12 @@ function FloorBlock({ floor, index, isTop, plan, pointedRoof, wallsPulse, wallLa
         return (
           <div key={`lbl-${r.id}`} title={`${r.name} · ${r.w}×${r.d} ft · ${r.area_sqft} sq ft`} style={{
             ...billboard((r.x! + r.w / 2) * k, -H - 14, (r.z! + r.d / 2) * k, rotX, rotY),
-            background: 'rgba(10,14,22,0.9)',
+            background: 'rgba(255,255,255,0.95)', boxShadow: '0 1px 3px rgba(60,52,44,0.18)',
             borderLeft: `3px solid ${meta.color}`,
             borderRadius: '4px', padding: '2px 5px',
             whiteSpace: 'nowrap', lineHeight: 1.15, maxWidth: `${maxW}px`, boxSizing: 'border-box',
           }}>
-            <div style={{ fontSize: '8px', fontWeight: 800, color: '#f1f5f9', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+            <div style={{ fontSize: '8px', fontWeight: 800, color: '#2b2926', overflow: 'hidden', textOverflow: 'ellipsis' }}>
               {meta.symbol} {r.name}
             </div>
             {maxW >= 72 && (
@@ -501,14 +501,14 @@ function RoofCap({ floor, k, W, D, y }: { floor: Floor; k: number; W: number; D:
       {floor.footprint.map((p, i) => (
         <div key={i} style={{
           ...flat(p.x * k, 0, p.z * k, p.w * k, p.d * k),
-          background: 'linear-gradient(135deg, #8a94a0, #5c6670)',
+          background: 'linear-gradient(135deg, #b3ada3, #958e83)',
           boxShadow: 'inset 0 0 16px rgba(0,0,0,0.3)',
         }} />
       ))}
       {ext.map((run, i) => (
         <div key={i} style={{
           ...(run.axis === 'x' ? wallX(run.x * k, -ROOF_H, run.z * k, run.len * k, ROOF_H) : wallZ(run.x * k, -ROOF_H, run.z * k, run.len * k, ROOF_H)),
-          background: 'linear-gradient(180deg, #6b747e, #3f464d)',
+          background: 'linear-gradient(180deg, #a8a297, #847d72)',
           border: '1px solid rgba(0,0,0,0.3)',
           filter: `brightness(${FACING_LIGHT[run.facing]})`,
         }} />
@@ -518,7 +518,7 @@ function RoofCap({ floor, k, W, D, y }: { floor: Floor; k: number; W: number; D:
 }
 
 /* ── Parking & gardens, placed on the plot by the user ── */
-const CAR_COLORS = ['#dc2626', '#e5e7eb', '#2563eb', '#111827', '#a3a3a3', '#ca8a04'];
+const CAR_COLORS = ['#c98b7e', '#dedad2', '#8fa5c2', '#111827', '#a3a3a3', '#cfb07c'];
 
 function CarBox({ x, z, along, color, k }: { x: number; z: number; along: 'x' | 'z'; color: string; k: number }) {
   // A ~6 × 11 ft car, nose pointing along `along`
@@ -528,7 +528,7 @@ function CarBox({ x, z, along, color, k }: { x: number; z: number; along: 'x' | 
   return (
     <>
       <div style={{ ...flat(x, -h, z, w, d), ...side(1.15), borderRadius: '2px' }}>
-        <div style={{ position: 'absolute', inset: '25%', background: 'rgba(30,41,59,0.75)', borderRadius: '1px' }} />
+        <div style={{ position: 'absolute', inset: '25%', background: 'rgba(37,40,44,0.75)', borderRadius: '1px' }} />
       </div>
       <div style={{ ...wallX(x, -h, z + d, w, h), ...side(0.9) }} />
       <div style={{ ...wallX(x, -h, z, w, h), ...side(0.6) }} />
@@ -546,8 +546,8 @@ function SiteFeatureView({ f, k, ox, oz, rotX, rotY, showLabels }: {
   const label = showLabels && (
     <div title={`${f.name} · ${f.area_sqft} sq ft`} style={{
       ...billboard(x + w / 2, -18, z + d / 2, rotX, rotY),
-      background: 'rgba(10,14,22,0.82)', borderLeft: `2px solid ${meta.color}`, borderRadius: '3px',
-      padding: '2px 4px', whiteSpace: 'nowrap', fontSize: '6px', fontWeight: 700, color: '#e2e8f0',
+      background: 'rgba(255,255,255,0.95)', borderLeft: `2px solid ${meta.color}`, borderRadius: '3px', boxShadow: '0 1px 3px rgba(60,52,44,0.18)',
+      padding: '2px 4px', whiteSpace: 'nowrap', fontSize: '6px', fontWeight: 700, color: '#3d3a35',
       maxWidth: `${Math.max(34, w - 4)}px`, boxSizing: 'border-box', overflow: 'hidden', textOverflow: 'ellipsis',
     }}>
       {meta.symbol} {f.name} · {f.area_sqft} SQFT
@@ -564,8 +564,8 @@ function SiteFeatureView({ f, k, ox, oz, rotX, rotY, showLabels }: {
         <div style={{
           ...flat(x, -0.4, z, w, d),
           background: along === 'x'
-            ? `repeating-linear-gradient(90deg, #3f3f46 0 ${stallFt * k - 1}px, #e5e7eb ${stallFt * k - 1}px ${stallFt * k}px), #3f3f46`
-            : `repeating-linear-gradient(180deg, #3f3f46 0 ${stallFt * k - 1}px, #e5e7eb ${stallFt * k - 1}px ${stallFt * k}px), #3f3f46`,
+            ? `repeating-linear-gradient(90deg, #8e8981 0 ${stallFt * k - 1}px, #f4f1ec ${stallFt * k - 1}px ${stallFt * k}px), #8e8981`
+            : `repeating-linear-gradient(180deg, #8e8981 0 ${stallFt * k - 1}px, #f4f1ec ${stallFt * k - 1}px ${stallFt * k}px), #8e8981`,
           border: `1px solid ${meta.color}`,
         }} />
         {fitsCar && Array.from({ length: Math.min(stalls, 6) }, (_, i) => (i % 3 === 2 ? null : (
@@ -588,7 +588,7 @@ function SiteFeatureView({ f, k, ox, oz, rotX, rotY, showLabels }: {
     <>
       <div style={{
         ...flat(x, -0.4, z, w, d),
-        background: 'radial-gradient(circle at 30% 30%, #4d8a3a, #2f5f22)',
+        background: 'radial-gradient(circle at 30% 30%, #8fa878, #5f7c4e)',
         border: `1px solid ${meta.color}90`, borderRadius: '4px',
       }} />
       {trees.map(([tx, tz], i) => (
@@ -830,7 +830,7 @@ export function BuildingVisualizer() {
   return (
     <div
       style={expanded
-        ? { position: 'fixed', inset: 0, zIndex: 800, display: 'flex', flexDirection: 'column', overflow: 'hidden', background: '#07070c' }
+        ? { position: 'fixed', inset: 0, zIndex: 800, display: 'flex', flexDirection: 'column', overflow: 'hidden', background: '#f4f1ec' }
         : { flex: 1, display: 'flex', flexDirection: 'column', position: 'relative', overflow: 'hidden', minWidth: 0 }}
       onMouseMove={onMouseMove}
       onMouseUp={stopDrag}
@@ -840,22 +840,22 @@ export function BuildingVisualizer() {
       <div style={{
         display: 'flex', alignItems: 'center', gap: '1.1rem',
         padding: '0.5rem 1.25rem', whiteSpace: 'nowrap', overflow: 'hidden',
-        background: 'rgba(0,0,0,0.4)',
+        background: 'rgba(60,52,44,0.14)',
         borderBottom: '1px solid var(--border-subtle)',
         fontSize: '0.65rem', fontWeight: 600, letterSpacing: '0.07em',
         color: 'var(--text-tertiary)', flexShrink: 0,
       }}>
         <span style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-          <span style={{ width: '7px', height: '7px', borderRadius: '50%', background: '#10b981', display: 'inline-block' }} />
+          <span style={{ width: '7px', height: '7px', borderRadius: '50%', background: '#5c7d59', display: 'inline-block' }} />
           RENDER: VULKAN 3D
         </span>
         <span>COORDS: {coords[0].toFixed(4)}° N, {coords[1].toFixed(4)}° E</span>
-        <span style={{ color: '#06b6d4' }}>ZOOM: {zoom.toFixed(1)}X</span>
-        <span style={{ color: '#f59e0b' }}>ROT Y: {displayRotY}°</span>
-        <span style={{ color: '#f59e0b' }}>ROT X: {displayRotX}°</span>
-        <span style={{ color: '#a78bfa' }}>SHAPE: {(floorShapes.length ? floorShapes : [shape]).join(' + ').toUpperCase()}</span>
-        <span style={{ color: '#a3e635' }}>VIEW: {exploded ? 'EXPLODED' : 'STACKED'}</span>
-        <span style={{ color: '#d6d3d1' }}>WALLS: {state.constraints.exteriorWallIn}″ / {state.constraints.interiorWallIn}″</span>
+        <span style={{ color: '#4f7d78' }}>ZOOM: {zoom.toFixed(1)}X</span>
+        <span style={{ color: '#a57c3a' }}>ROT Y: {displayRotY}°</span>
+        <span style={{ color: '#a57c3a' }}>ROT X: {displayRotX}°</span>
+        <span style={{ color: '#5f5a80' }}>SHAPE: {(floorShapes.length ? floorShapes : [shape]).join(' + ').toUpperCase()}</span>
+        <span style={{ color: '#77804e' }}>VIEW: {exploded ? 'EXPLODED' : 'STACKED'}</span>
+        <span style={{ color: '#6b665e' }}>WALLS: {state.constraints.exteriorWallIn}″ / {state.constraints.interiorWallIn}″</span>
         <span style={{ marginLeft: 'auto' }}>FPS: {fps}</span>
       </div>
 
@@ -876,14 +876,14 @@ export function BuildingVisualizer() {
         {/* Grid bg */}
         <div style={{
           position: 'absolute', inset: 0, pointerEvents: 'none',
-          backgroundImage: `linear-gradient(rgba(255,255,255,0.012) 1px, transparent 1px),linear-gradient(90deg, rgba(255,255,255,0.012) 1px, transparent 1px)`,
+          backgroundImage: `linear-gradient(rgba(60,52,44,0.06) 1px, transparent 1px),linear-gradient(90deg, rgba(60,52,44,0.06) 1px, transparent 1px)`,
           backgroundSize: '40px 40px',
         }} />
 
         {/* Radial glow */}
         <div style={{
           position: 'absolute', width: '600px', height: '600px', borderRadius: '50%',
-          background: 'radial-gradient(ellipse, rgba(6,182,212,0.05) 0%, transparent 70%)',
+          background: 'radial-gradient(ellipse, rgba(79,125,120,0.05) 0%, transparent 70%)',
           pointerEvents: 'none',
         }} />
 
@@ -910,7 +910,7 @@ export function BuildingVisualizer() {
             <button onClick={() => setExpanded(v => !v)} title={expanded ? 'Exit full view (Esc)' : 'Full 3D view — or click the building'}
               style={{
                 pointerEvents: 'auto', display: 'flex', alignItems: 'center', gap: '0.4rem', padding: '0.35rem 0.7rem',
-                background: 'rgba(13,13,20,0.85)', border: '1px solid var(--border-subtle)', borderRadius: '8px',
+                background: 'rgba(255,255,255,0.85)', border: '1px solid var(--border-subtle)', borderRadius: '8px',
                 color: 'var(--text-secondary)', fontSize: '0.66rem', fontWeight: 700, cursor: 'pointer', whiteSpace: 'nowrap',
               }}>
               {expanded ? <><Minimize2 size={13} /> Exit full view</> : <><Maximize2 size={13} /> Full 3D view</>}
@@ -921,8 +921,8 @@ export function BuildingVisualizer() {
           {unplacedCount > 0 && (
             <button onClick={() => setPlanOpen(true)} title="Open the Floor Plan to place them" style={{
               pointerEvents: 'auto', display: 'flex', alignItems: 'center', gap: '0.4rem', whiteSpace: 'nowrap',
-              background: 'rgba(251,191,36,0.12)', border: '1px solid rgba(251,191,36,0.45)', borderRadius: '20px',
-              padding: '0.3rem 0.75rem', color: '#fbbf24', fontSize: '0.66rem', fontWeight: 700, cursor: 'pointer',
+              background: 'rgba(165,124,58,0.12)', border: '1px solid rgba(165,124,58,0.45)', borderRadius: '20px',
+              padding: '0.3rem 0.75rem', color: '#8c6a2f', fontSize: '0.66rem', fontWeight: 700, cursor: 'pointer',
             }}>
               <LayoutGrid size={13} /> {unplacedCount} room{unplacedCount === 1 ? '' : 's'} to place
             </button>
@@ -932,12 +932,12 @@ export function BuildingVisualizer() {
           {cutAt && !exploded && (cutAt < totalFloors || !planMode) && (
             <div style={{
               pointerEvents: 'auto', display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.25rem 0.35rem 0.25rem 0.75rem',
-              background: 'rgba(124,58,237,0.15)', border: '1px solid rgba(124,58,237,0.5)', borderRadius: '20px',
-              color: '#e9d5ff', fontSize: '0.66rem', fontWeight: 700, whiteSpace: 'nowrap',
+              background: 'rgba(110,104,144,0.15)', border: '1px solid rgba(110,104,144,0.5)', borderRadius: '20px',
+              color: '#4f4a6e', fontSize: '0.66rem', fontWeight: 700, whiteSpace: 'nowrap',
             }}>
               {cutAt < totalFloors ? `Floor ${cutAt} only` : `Floor ${cutAt} · roof hidden`}
               {!placing && (
-                <button onClick={() => setFocusFloor(null)} style={{ background: 'rgba(255,255,255,0.1)', border: 'none', borderRadius: '12px', padding: '0.18rem 0.55rem', color: '#fff', fontSize: '0.64rem', fontWeight: 700, cursor: 'pointer' }}>
+                <button onClick={() => setFocusFloor(null)} style={{ background: 'rgba(60,52,44,0.12)', border: 'none', borderRadius: '12px', padding: '0.18rem 0.55rem', color: 'var(--text-primary)', fontSize: '0.64rem', fontWeight: 700, cursor: 'pointer' }}>
                   {cutAt < totalFloors ? 'Show all' : 'Show roof'}
                 </button>
               )}
@@ -950,7 +950,7 @@ export function BuildingVisualizer() {
           <div style={{
             position: 'absolute', bottom: '5.6rem', left: '1rem', zIndex: 4,
             display: 'grid', gridTemplateColumns: 'repeat(2, auto)', gap: '0.15rem 0.6rem',
-            background: 'rgba(13,13,20,0.75)', border: '1px solid var(--border-subtle)',
+            background: 'rgba(255,255,255,0.75)', border: '1px solid var(--border-subtle)',
             borderRadius: '10px', padding: '0.5rem 0.65rem', pointerEvents: 'none',
           }}>
             {[...Object.entries(ROOM_META), ...Object.entries(SITE_META)].map(([type, meta]) => (
@@ -982,19 +982,19 @@ export function BuildingVisualizer() {
               <div style={{
                 ...flat(ground.x, 1, ground.z, ground.w, ground.d),
                 background: `
-                  radial-gradient(circle at 28% 36%, rgba(94,122,66,0.55) 0%, transparent 32%),
-                  radial-gradient(circle at 72% 62%, rgba(74,100,56,0.5) 0%, transparent 28%),
-                  radial-gradient(circle at 48% 18%, rgba(112,104,74,0.32) 0%, transparent 38%),
-                  radial-gradient(circle at 15% 80%, rgba(84,110,64,0.4) 0%, transparent 30%),
-                  linear-gradient(135deg, #3c4c30, #293523)
+                  radial-gradient(circle at 28% 36%, rgba(150,168,128,0.35) 0%, transparent 32%),
+                  radial-gradient(circle at 72% 62%, rgba(140,158,118,0.3) 0%, transparent 28%),
+                  radial-gradient(circle at 48% 18%, rgba(178,168,138,0.25) 0%, transparent 38%),
+                  radial-gradient(circle at 15% 80%, rgba(146,164,124,0.3) 0%, transparent 30%),
+                  linear-gradient(135deg, #d3d6c3, #c3c8b0)
                 `,
-                boxShadow: 'inset 0 0 70px rgba(0,0,0,0.45)',
+                boxShadow: 'inset 0 0 70px rgba(60,52,44,0.158)',
                 overflow: 'hidden',
               }}>
                 {/* Faint satellite grid / plot lines */}
                 <div style={{
                   position: 'absolute', inset: 0,
-                  backgroundImage: `linear-gradient(rgba(255,255,255,0.05) 1px, transparent 1px),linear-gradient(90deg, rgba(255,255,255,0.05) 1px, transparent 1px)`,
+                  backgroundImage: `linear-gradient(rgba(60,52,44,0.06) 1px, transparent 1px),linear-gradient(90deg, rgba(60,52,44,0.06) 1px, transparent 1px)`,
                   backgroundSize: '26px 26px',
                 }} />
                 {/* Highlight glow — spotlights the house against the terrain */}
@@ -1002,7 +1002,7 @@ export function BuildingVisualizer() {
                   position: 'absolute', left: `${BASE_W / 2 - ground.x}px`, top: `${BASE_D / 2 - ground.z}px`,
                   width: `${BASE_W + 200}px`, height: `${BASE_D + 160}px`,
                   transform: 'translate(-50%,-50%)', borderRadius: '50%',
-                  background: 'radial-gradient(ellipse, rgba(6,182,212,0.35) 0%, rgba(124,58,237,0.16) 42%, transparent 72%)',
+                  background: 'radial-gradient(ellipse, rgba(79,125,120,0.35) 0%, rgba(110,104,144,0.16) 42%, transparent 72%)',
                   animation: 'houseGlowPulse 3.5s ease-in-out infinite',
                 }} />
                 {/* Contact shadow directly under the house */}
@@ -1010,13 +1010,13 @@ export function BuildingVisualizer() {
                   position: 'absolute', left: `${BASE_W / 2 - ground.x}px`, top: `${BASE_D / 2 - ground.z}px`,
                   width: `${BASE_W + 50}px`, height: `${BASE_D + 40}px`,
                   transform: 'translate(-50%,-50%)', borderRadius: '12%',
-                  background: 'radial-gradient(ellipse, rgba(0,0,0,0.7) 0%, transparent 72%)',
+                  background: 'radial-gradient(ellipse, rgba(60,52,44,0.245) 0%, transparent 72%)',
                 }} />
                 {/* Road running past the front of the plot */}
                 <div style={{
                   position: 'absolute', left: 0, top: `${roadTop}px`, width: '100%', height: `${ROAD_H}px`,
-                  background: 'linear-gradient(90deg, rgba(55,55,55,0.85), rgba(88,88,88,0.92), rgba(55,55,55,0.85))',
-                  boxShadow: '0 0 8px rgba(0,0,0,0.5)',
+                  background: 'linear-gradient(90deg, rgba(118,113,106,0.85), rgba(142,137,129,0.92), rgba(118,113,106,0.85))',
+                  boxShadow: '0 0 8px rgba(60,52,44,0.175)',
                 }}>
                   <div style={{
                     position: 'absolute', top: '50%', left: 0, width: '100%', height: '1px',
@@ -1036,8 +1036,8 @@ export function BuildingVisualizer() {
                   <div key={i} style={{
                     position: 'absolute', left: `${t.x}px`, top: `${t.y}px`,
                     width: `${t.r}px`, height: `${t.r}px`, borderRadius: '50%',
-                    background: 'radial-gradient(circle at 35% 30%, #5a8a3a, #1f3a16)',
-                    boxShadow: '0 1px 3px rgba(0,0,0,0.5)',
+                    background: 'radial-gradient(circle at 35% 30%, #93ab7c, #61804f)',
+                    boxShadow: '0 1px 3px rgba(60,52,44,0.175)',
                     transform: 'translate(-50%,-50%)',
                   }} />
                 ))}
@@ -1046,10 +1046,10 @@ export function BuildingVisualizer() {
                   position: 'absolute',
                   left: `${plotLocal.x}px`, top: `${plotLocal.z}px`,
                   width: `${plotLocal.w}px`, height: `${plotLocal.d}px`,
-                  border: '1px dashed rgba(255,255,255,0.45)',
+                  border: '1px dashed rgba(60,52,44,0.45)',
                   background: 'rgba(120,140,90,0.12)',
                 }}>
-                  <span style={{ position: 'absolute', right: '4px', bottom: '2px', fontSize: '7px', fontWeight: 700, color: 'rgba(255,255,255,0.55)', letterSpacing: '0.08em' }}>
+                  <span style={{ position: 'absolute', right: '4px', bottom: '2px', fontSize: '7px', fontWeight: 700, color: 'rgba(60,52,44,0.55)', letterSpacing: '0.08em' }}>
                     PLOT {site.plot_width_ft}×{site.plot_depth_ft} FT
                   </span>
                 </div>
@@ -1097,7 +1097,7 @@ export function BuildingVisualizer() {
                     return (
                       <>
                         <div style={{ ...flat(gx, -1.5, gz, gw, gd), background: `rgba(${c},0.45)`, border: `2px dashed rgb(${c})`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                          <span style={{ fontSize: `${Math.max(5, Math.min(8, gw * 0.12))}px`, fontWeight: 800, color: '#0f172a', textAlign: 'center' }}>
+                          <span style={{ fontSize: `${Math.max(5, Math.min(8, gw * 0.12))}px`, fontWeight: 800, color: '#1c1c1e', textAlign: 'center' }}>
                             {ghost.w}×{ghost.d} ft
                           </span>
                         </div>
@@ -1105,7 +1105,7 @@ export function BuildingVisualizer() {
                         <div style={{ ...wallX(gx, -gh, gz, gw, gh), ...side }} />
                         <div style={{ ...wallZ(gx, -gh, gz, gd, gh), ...side }} />
                         <div style={{ ...wallZ(gx + gw, -gh, gz, gd, gh), ...side }} />
-                        <div style={{ ...billboard(gx + gw / 2, -gh - 4, gz - 6, rotX, rotY), background: 'rgba(10,14,22,0.88)', border: `1px solid rgb(${c})`, borderRadius: '3px', padding: '1px 4px', fontSize: '5px', fontWeight: 700, color: '#e2e8f0', whiteSpace: 'nowrap' }}>
+                        <div style={{ ...billboard(gx + gw / 2, -gh - 4, gz - 6, rotX, rotY), background: 'rgba(255,255,255,0.88)', border: `1px solid rgb(${c})`, borderRadius: '3px', padding: '1px 4px', fontSize: '5px', fontWeight: 700, color: '#3d3a35', whiteSpace: 'nowrap' }}>
                           {roomMeta(placing.type).symbol} {ghost.w}×{ghost.d} FT · {ghostValid ? 'CLICK TO PLACE' : 'BLOCKED'}
                         </div>
                       </>
@@ -1118,14 +1118,14 @@ export function BuildingVisualizer() {
         )}
 
         <style>{`@keyframes houseGlowPulse { 0%, 100% { opacity: 0.75; } 50% { opacity: 1; } }
-          @keyframes wallPulse { 0%, 100% { filter: none; } 50% { filter: drop-shadow(0 0 6px #f59e0b) brightness(1.4) sepia(1) saturate(4) hue-rotate(-15deg); } }`}</style>
+          @keyframes wallPulse { 0%, 100% { filter: none; } 50% { filter: drop-shadow(0 0 6px #a57c3a) brightness(1.4) sepia(1) saturate(4) hue-rotate(-15deg); } }`}</style>
       </div>
 
       {/* ── Labelled toolbar ── */}
       <div style={{
         position: 'absolute', bottom: '1.5rem', left: '50%', transform: 'translateX(-50%)',
         display: 'flex', gap: '0.25rem',
-        background: 'rgba(13,13,20,0.92)', border: '1px solid var(--border-subtle)',
+        background: 'rgba(255,255,255,0.92)', border: '1px solid var(--border-subtle)',
         borderRadius: '16px', padding: '0.6rem 0.85rem', backdropFilter: 'blur(16px)',
         alignItems: 'flex-end',
       }}>
@@ -1149,10 +1149,10 @@ export function BuildingVisualizer() {
 
       {blocked && (
         <div role="dialog" aria-modal="true" onClick={() => setBlocked(null)}
-          style={{ position: 'fixed', inset: 0, zIndex: 3000, background: 'rgba(0,0,0,0.55)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem' }}>
+          style={{ position: 'fixed', inset: 0, zIndex: 3000, background: 'rgba(60,52,44,0.193)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem' }}>
           <div onClick={e => e.stopPropagation()}
-            style={{ width: 'min(380px, 100%)', background: '#13131d', border: `1px solid ${blocked.budget ? '#ef444466' : '#f59e0b66'}`, borderTop: `3px solid ${blocked.budget ? '#ef4444' : '#f59e0b'}`, borderRadius: '12px', padding: '1.1rem 1.2rem', boxShadow: '0 20px 50px rgba(0,0,0,0.6)' }}>
-            <div style={{ fontSize: '1rem', fontWeight: 800, color: '#f1f5f9', marginBottom: '0.5rem' }}>
+            style={{ width: 'min(380px, 100%)', background: '#ffffff', border: `1px solid ${blocked.budget ? '#b0604f66' : '#a57c3a66'}`, borderTop: `3px solid ${blocked.budget ? '#b0604f' : '#a57c3a'}`, borderRadius: '12px', padding: '1.1rem 1.2rem', boxShadow: '0 20px 50px rgba(60,52,44,0.21)' }}>
+            <div style={{ fontSize: '1rem', fontWeight: 800, color: '#2b2926', marginBottom: '0.5rem' }}>
               {blocked.budget ? '💸 ' : '⚠️ '}{blocked.title}
             </div>
             <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', lineHeight: 1.5 }}>{blocked.message}</div>
@@ -1162,7 +1162,7 @@ export function BuildingVisualizer() {
               </div>
             )}
             <button onClick={() => setBlocked(null)} autoFocus
-              style={{ marginTop: '0.9rem', width: '100%', padding: '0.5rem', borderRadius: '8px', border: 'none', background: blocked.budget ? '#ef4444' : '#f59e0b', color: '#fff', fontWeight: 700, fontSize: '0.8rem', cursor: 'pointer' }}>
+              style={{ marginTop: '0.9rem', width: '100%', padding: '0.5rem', borderRadius: '8px', border: 'none', background: blocked.budget ? '#b0604f' : '#a57c3a', color: '#fff', fontWeight: 700, fontSize: '0.8rem', cursor: 'pointer' }}>
               OK
             </button>
           </div>
@@ -1182,9 +1182,9 @@ function ToolBtn({ icon, label, onClick, accent, active, loading }: {
       title={label} onClick={onClick} disabled={loading}
       style={{
         minWidth: '52px', padding: '0.4rem 0.4rem 0.3rem', borderRadius: '10px',
-        background: accent ? 'linear-gradient(135deg,#ec4899,#f97316)' : active ? 'rgba(6,182,212,0.15)' : 'rgba(255,255,255,0.04)',
-        border: accent ? 'none' : active ? '1px solid rgba(6,182,212,0.3)' : '1px solid transparent',
-        color: accent ? '#fff' : active ? '#06b6d4' : 'var(--text-secondary)',
+        background: accent ? '#5d6b80' : active ? 'rgba(79,125,120,0.15)' : 'rgba(60,52,44,0.048)',
+        border: accent ? 'none' : active ? '1px solid rgba(79,125,120,0.3)' : '1px solid transparent',
+        color: accent ? '#fff' : active ? '#4f7d78' : 'var(--text-secondary)',
         display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.2rem',
         cursor: loading ? 'wait' : 'pointer', transition: 'all 0.15s', opacity: loading ? 0.7 : 1,
       }}
@@ -1210,7 +1210,7 @@ function EmptyState({ onAddFloor, adding }: { onAddFloor: () => void; adding: bo
       </div>
       <button
         onClick={onAddFloor} disabled={adding}
-        style={{ background: 'linear-gradient(135deg,#7c3aed,#06b6d4)', border: 'none', borderRadius: '8px', padding: '0.6rem 1.25rem', color: '#fff', fontSize: '0.82rem', fontWeight: 600, cursor: adding ? 'wait' : 'pointer', display: 'flex', alignItems: 'center', gap: '0.4rem' }}
+        style={{ background: '#5d6b80', border: 'none', borderRadius: '8px', padding: '0.6rem 1.25rem', color: '#fff', fontSize: '0.82rem', fontWeight: 600, cursor: adding ? 'wait' : 'pointer', display: 'flex', alignItems: 'center', gap: '0.4rem' }}
       >
         <Plus size={14} />
         {adding ? 'Adding...' : 'Add First Floor'}

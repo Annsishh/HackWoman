@@ -118,7 +118,7 @@ export function ProfilePage({ onBack }: ProfilePageProps) {
           <p style={{ margin: 0, fontSize: '0.75rem', color: 'var(--text-secondary)' }}>Changes are saved to Firebase Cloud</p>
         </div>
         {saved && (
-          <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: '0.4rem', color: '#10b981', fontSize: '0.78rem', fontWeight: 600 }}>
+          <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: '0.4rem', color: '#5c7d59', fontSize: '0.78rem', fontWeight: 600 }}>
             <CheckCircle size={15} /> Saved to cloud
           </div>
         )}
@@ -129,20 +129,20 @@ export function ProfilePage({ onBack }: ProfilePageProps) {
         <div style={{ width: '100%', maxWidth: '600px', display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
 
           {/* Hero card */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '1.5rem', padding: '1.5rem', background: 'linear-gradient(135deg, rgba(124,58,237,0.08), rgba(6,182,212,0.05))', border: '1px solid rgba(124,58,237,0.2)', borderRadius: '16px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '1.5rem', padding: '1.5rem', background: 'rgba(93,107,128,0.036)', border: '1px solid rgba(110,104,144,0.2)', borderRadius: '16px' }}>
             {/* Avatar with upload */}
             <div style={{ position: 'relative', flexShrink: 0 }}>
               {photoPreview ? (
-                <img src={photoPreview} alt="avatar" style={{ width: '80px', height: '80px', borderRadius: '50%', objectFit: 'cover', border: '3px solid rgba(124,58,237,0.4)' }} />
+                <img src={photoPreview} alt="avatar" style={{ width: '80px', height: '80px', borderRadius: '50%', objectFit: 'cover', border: '3px solid rgba(110,104,144,0.4)' }} />
               ) : (
-                <div style={{ width: '80px', height: '80px', borderRadius: '50%', background: 'linear-gradient(135deg,#7c3aed,#06b6d4)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.5rem', fontWeight: 800, color: '#fff', border: '3px solid rgba(124,58,237,0.4)' }}>
+                <div style={{ width: '80px', height: '80px', borderRadius: '50%', background: '#5d6b80', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.5rem', fontWeight: 800, color: '#fff', border: '3px solid rgba(110,104,144,0.4)' }}>
                   {initials}
                 </div>
               )}
 
               {/* Upload progress ring */}
               {uploadProgress !== null && (
-                <div style={{ position: 'absolute', inset: 0, borderRadius: '50%', background: 'rgba(0,0,0,0.55)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column' }}>
+                <div style={{ position: 'absolute', inset: 0, borderRadius: '50%', background: 'rgba(43,41,38,0.55)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column' }}>
                   <span style={{ fontSize: '0.65rem', fontWeight: 800, color: '#fff' }}>{uploadProgress}%</span>
                 </div>
               )}
@@ -151,7 +151,7 @@ export function ProfilePage({ onBack }: ProfilePageProps) {
               <button
                 onClick={() => fileRef.current?.click()}
                 title="Change photo"
-                style={{ position: 'absolute', bottom: 0, right: 0, width: '28px', height: '28px', borderRadius: '50%', background: 'linear-gradient(135deg,#7c3aed,#06b6d4)', border: '2px solid var(--bg-primary)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', padding: 0 }}
+                style={{ position: 'absolute', bottom: 0, right: 0, width: '28px', height: '28px', borderRadius: '50%', background: '#5d6b80', border: '2px solid var(--bg-primary)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', padding: 0 }}
               >
                 <Camera size={13} color="#fff" />
               </button>
@@ -166,17 +166,17 @@ export function ProfilePage({ onBack }: ProfilePageProps) {
                 {user?.email}
               </div>
               {pendingFile && (
-                <div style={{ fontSize: '0.65rem', color: '#f59e0b', marginBottom: '0.4rem', display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
+                <div style={{ fontSize: '0.65rem', color: '#a57c3a', marginBottom: '0.4rem', display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
                   <Camera size={10} /> New photo ready — click Save to upload
                 </div>
               )}
-              <div style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem', background: 'rgba(124,58,237,0.12)', border: '1px solid rgba(124,58,237,0.3)', borderRadius: '20px', padding: '0.2rem 0.65rem' }}>
-                <div style={{ width: '5px', height: '5px', borderRadius: '50%', background: '#10b981' }} />
-                <span style={{ fontSize: '0.6rem', fontWeight: 700, color: '#a78bfa', letterSpacing: '0.06em' }}>FREE PLAN</span>
+              <div style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem', background: 'rgba(110,104,144,0.12)', border: '1px solid rgba(110,104,144,0.3)', borderRadius: '20px', padding: '0.2rem 0.65rem' }}>
+                <div style={{ width: '5px', height: '5px', borderRadius: '50%', background: '#5c7d59' }} />
+                <span style={{ fontSize: '0.6rem', fontWeight: 700, color: '#5f5a80', letterSpacing: '0.06em' }}>FREE PLAN</span>
               </div>
             </div>
 
-            <button onClick={() => onBack()} style={{ flexShrink: 0, display: 'flex', alignItems: 'center', gap: '0.4rem', background: 'linear-gradient(135deg,#7c3aed,#06b6d4)', border: 'none', borderRadius: '10px', padding: '0.55rem 1rem', color: '#fff', fontSize: '0.75rem', fontWeight: 700, cursor: 'pointer' }}>
+            <button onClick={() => onBack()} style={{ flexShrink: 0, display: 'flex', alignItems: 'center', gap: '0.4rem', background: '#5d6b80', border: 'none', borderRadius: '10px', padding: '0.55rem 1rem', color: '#fff', fontSize: '0.75rem', fontWeight: 700, cursor: 'pointer' }}>
               <Crown size={13} /> Upgrade
             </button>
           </div>
@@ -224,7 +224,7 @@ export function ProfilePage({ onBack }: ProfilePageProps) {
                   </div>
                 </div>
               </div>
-              <span style={{ fontSize: '0.65rem', fontWeight: 700, color: '#10b981', background: 'rgba(16,185,129,0.1)', border: '1px solid rgba(16,185,129,0.2)', borderRadius: '20px', padding: '0.15rem 0.55rem' }}>Active</span>
+              <span style={{ fontSize: '0.65rem', fontWeight: 700, color: '#5c7d59', background: 'rgba(92,125,89,0.1)', border: '1px solid rgba(92,125,89,0.2)', borderRadius: '20px', padding: '0.15rem 0.55rem' }}>Active</span>
             </div>
 
             {/* Upload progress bar */}
@@ -235,13 +235,13 @@ export function ProfilePage({ onBack }: ProfilePageProps) {
                   <span>{uploadProgress}%</span>
                 </div>
                 <div style={{ height: '4px', background: 'var(--bg-tertiary)', borderRadius: '2px', overflow: 'hidden' }}>
-                  <div style={{ height: '100%', width: `${uploadProgress}%`, background: 'linear-gradient(90deg,#7c3aed,#06b6d4)', borderRadius: '2px', transition: 'width 0.2s' }} />
+                  <div style={{ height: '100%', width: `${uploadProgress}%`, background: 'linear-gradient(90deg, #7d8aa3, #8fa9a2)', borderRadius: '2px', transition: 'width 0.2s' }} />
                 </div>
               </div>
             )}
 
             {error && (
-              <div style={{ fontSize: '0.75rem', color: '#f87171', background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.2)', borderRadius: '8px', padding: '0.6rem 0.8rem', lineHeight: 1.5 }}>
+              <div style={{ fontSize: '0.75rem', color: '#9a5040', background: 'rgba(176,96,79,0.08)', border: '1px solid rgba(176,96,79,0.2)', borderRadius: '8px', padding: '0.6rem 0.8rem', lineHeight: 1.5 }}>
                 {error}
               </div>
             )}
@@ -252,8 +252,8 @@ export function ProfilePage({ onBack }: ProfilePageProps) {
               style={{
                 display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem',
                 padding: '0.75rem',
-                background: saved ? '#10b981' : hasChanges || pendingFile ? 'linear-gradient(135deg,#7c3aed,#06b6d4)' : 'var(--bg-tertiary)',
-                border: 'none', borderRadius: '10px', color: '#fff',
+                background: saved ? '#5c7d59' : hasChanges || pendingFile ? '#5d6b80' : 'var(--bg-tertiary)',
+                border: 'none', borderRadius: '10px', color: saved || hasChanges || pendingFile ? '#fff' : 'var(--text-tertiary)',
                 fontSize: '0.85rem', fontWeight: 700,
                 cursor: saving || (!hasChanges && !pendingFile) ? 'not-allowed' : 'pointer',
                 opacity: saving ? 0.75 : 1,
@@ -270,7 +270,7 @@ export function ProfilePage({ onBack }: ProfilePageProps) {
           <div style={{ background: 'var(--bg-elevated)', border: '1px solid var(--border-subtle)', borderRadius: '16px', padding: '1.5rem' }}>
             <div style={{ fontSize: '0.65rem', letterSpacing: '0.1em', fontWeight: 700, color: 'var(--text-tertiary)', marginBottom: '1rem' }}>PREFERENCES</div>
             {[
-              { icon: <Bell size={14} />, label: 'Email Notifications', sub: 'Receive project updates via email', color: '#10b981', on: true },
+              { icon: <Bell size={14} />, label: 'Email Notifications', sub: 'Receive project updates via email', color: '#5c7d59', on: true },
               { icon: <Shield size={14} />, label: 'Two-Factor Auth', sub: 'Available on Identity Platform upgrade', color: 'var(--text-tertiary)', on: false, disabled: true },
             ].map(({ icon, label, sub, color, on, disabled }) => (
               <div key={label} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingBottom: '0.85rem', marginBottom: '0.85rem', borderBottom: '1px solid var(--border-subtle)' }}>
@@ -281,7 +281,7 @@ export function ProfilePage({ onBack }: ProfilePageProps) {
                     <div style={{ fontSize: '0.65rem', color: 'var(--text-tertiary)' }}>{sub}</div>
                   </div>
                 </div>
-                <span style={{ fontSize: '0.65rem', fontWeight: 700, color: disabled ? 'var(--text-tertiary)' : color, background: disabled ? 'var(--bg-secondary)' : on ? 'rgba(16,185,129,0.1)' : 'rgba(245,158,11,0.1)', border: `1px solid ${disabled ? 'var(--border-subtle)' : on ? 'rgba(16,185,129,0.25)' : 'rgba(245,158,11,0.25)'}`, borderRadius: '20px', padding: '0.15rem 0.55rem' }}>
+                <span style={{ fontSize: '0.65rem', fontWeight: 700, color: disabled ? 'var(--text-tertiary)' : color, background: disabled ? 'var(--bg-secondary)' : on ? 'rgba(92,125,89,0.1)' : 'rgba(165,124,58,0.1)', border: `1px solid ${disabled ? 'var(--border-subtle)' : on ? 'rgba(92,125,89,0.25)' : 'rgba(165,124,58,0.25)'}`, borderRadius: '20px', padding: '0.15rem 0.55rem' }}>
                   {disabled ? 'Unavailable' : on ? 'On' : 'Off'}
                 </span>
               </div>
@@ -289,9 +289,9 @@ export function ProfilePage({ onBack }: ProfilePageProps) {
           </div>
 
           {/* Danger zone */}
-          <div style={{ background: 'rgba(239,68,68,0.04)', border: '1px solid rgba(239,68,68,0.15)', borderRadius: '16px', padding: '1.5rem', marginBottom: '1rem' }}>
-            <div style={{ fontSize: '0.65rem', letterSpacing: '0.1em', fontWeight: 700, color: '#f87171', marginBottom: '1rem' }}>DANGER ZONE</div>
-            <button onClick={signOut} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.25)', borderRadius: '10px', padding: '0.65rem 1.25rem', color: '#f87171', fontSize: '0.82rem', fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>
+          <div style={{ background: 'rgba(176,96,79,0.04)', border: '1px solid rgba(176,96,79,0.15)', borderRadius: '16px', padding: '1.5rem', marginBottom: '1rem' }}>
+            <div style={{ fontSize: '0.65rem', letterSpacing: '0.1em', fontWeight: 700, color: '#9a5040', marginBottom: '1rem' }}>DANGER ZONE</div>
+            <button onClick={signOut} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', background: 'rgba(176,96,79,0.1)', border: '1px solid rgba(176,96,79,0.25)', borderRadius: '10px', padding: '0.65rem 1.25rem', color: '#9a5040', fontSize: '0.82rem', fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>
               <LogOut size={14} /> Sign Out
             </button>
           </div>

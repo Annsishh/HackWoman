@@ -102,10 +102,10 @@ export function ConfigurationModal({ onComplete }: ConfigurationModalProps) {
                 display: 'flex', gap: '0.5rem', flexWrap: 'wrap', lineHeight: 1.6,
               }}>
                 {[
-                  { text: selectedDistrict.region, color: '#7c3aed' },
-                  { text: selectedDistrict.thermal.climateZone, color: '#f59e0b' },
-                  { text: `Seismic Zone ${selectedDistrict.seismic.zone}`, color: '#ef4444' },
-                  { text: `Wind ${selectedDistrict.wind.basicWindSpeed} km/h`, color: '#06b6d4' },
+                  { text: selectedDistrict.region, color: '#6e6890' },
+                  { text: selectedDistrict.thermal.climateZone, color: '#a57c3a' },
+                  { text: `Seismic Zone ${selectedDistrict.seismic.zone}`, color: '#b0604f' },
+                  { text: `Wind ${selectedDistrict.wind.basicWindSpeed} km/h`, color: '#4f7d78' },
                 ].map(({ text, color }) => (
                   <span key={text} style={{ 
                     color, 
@@ -168,7 +168,7 @@ export function ConfigurationModal({ onComplete }: ConfigurationModalProps) {
             {(() => {
               const plot = parseInt(plotSqft, 10), floor = parseInt(floorSqft, 10);
               if (!plot || !floor) return 'Enter both areas.';
-              if (floor >= plot) return <span style={{ color: '#f87171' }}>Built-up area must be less than the plot area.</span>;
+              if (floor >= plot) return <span style={{ color: '#9a5040' }}>Built-up area must be less than the plot area.</span>;
               return `${plot - floor} sq ft of open land left for parking, garden and setbacks. You'll size and place every room yourself.`;
             })()}
           </div>
@@ -189,20 +189,20 @@ export function ConfigurationModal({ onComplete }: ConfigurationModalProps) {
                     style={{
                       display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.3rem',
                       padding: '0.5rem 0.25rem', borderRadius: '10px', cursor: 'pointer',
-                      background: active ? 'rgba(124,58,237,0.18)' : 'rgba(255,255,255,0.04)',
-                      border: `1px solid ${active ? '#7c3aed' : 'var(--border-color)'}`,
-                      color: active ? '#e9d5ff' : 'var(--text-secondary)',
+                      background: active ? 'rgba(110,104,144,0.18)' : 'rgba(60,52,44,0.048)',
+                      border: `1px solid ${active ? '#6e6890' : 'var(--border-color)'}`,
+                      color: active ? '#4f4a6e' : 'var(--text-secondary)',
                     }}
                   >
                     <svg width="48" height="40" viewBox={`-2 -2 ${W + 4} ${Math.max(D, 32) + 4}`}>
                       {sh.id === 'pyramid'
                         ? [1, 0.72, 0.44].map(k => (
                             <rect key={k} x={(W - W * k) / 2} y={(D - D * k) / 2} width={W * k} height={D * k}
-                              fill={`rgba(167,139,250,${0.25 + (1 - k) * 0.4})`} stroke="#a78bfa" strokeWidth="1" />
+                              fill={`rgba(194,190,214,${0.25 + (1 - k) * 0.4})`} stroke="#5f5a80" strokeWidth="1" />
                           ))
                         : sh.rects.map(([x, z, w, d], i) => (
                             <rect key={i} x={x * W} y={z * D} width={w * W} height={d * D}
-                              fill="rgba(167,139,250,0.35)" stroke="#a78bfa" strokeWidth="1" />
+                              fill="rgba(95,90,128,0.35)" stroke="#5f5a80" strokeWidth="1" />
                           ))}
                     </svg>
                     <span style={{ fontSize: '0.68rem', fontWeight: 600 }}>{sh.label}</span>
@@ -213,7 +213,7 @@ export function ConfigurationModal({ onComplete }: ConfigurationModalProps) {
           </div>
 
           {error && (
-            <div style={{ fontSize: '0.78rem', color: '#f87171', background: 'rgba(248,113,113,0.08)', border: '1px solid rgba(248,113,113,0.3)', borderRadius: '8px', padding: '0.6rem 0.75rem' }}>
+            <div style={{ fontSize: '0.78rem', color: '#9a5040', background: 'rgba(154,80,64,0.08)', border: '1px solid rgba(154,80,64,0.3)', borderRadius: '8px', padding: '0.6rem 0.75rem' }}>
               {error}
             </div>
           )}

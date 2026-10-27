@@ -15,16 +15,16 @@ export function LeftWorkspace() {
   return (
     <div style={{
       width: '340px', flexShrink: 0, display: 'flex', flexDirection: 'column', height: '100%',
-      background: '#0d0d14', borderRight: '1px solid var(--border-subtle)',
+      background: '#fbfaf7', borderRight: '1px solid var(--border-subtle)',
     }}>
       <div style={{ display: 'flex', gap: '0.3rem', padding: '0.6rem 0.85rem', borderBottom: '1px solid var(--border-subtle)' }}>
         {([['design', 'Design your home', <LayoutGrid key="d" size={14} />], ['chat', 'AI Chat', <MessageSquare key="c" size={14} />]] as [Mode, string, React.ReactNode][]).map(([id, label, icon]) => (
           <button key={id} onClick={() => setMode(id)} style={{
             flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.4rem',
             padding: '0.5rem', borderRadius: '8px', fontSize: '0.76rem', fontWeight: 700, cursor: 'pointer',
-            background: mode === id ? 'linear-gradient(135deg, rgba(124,58,237,0.3), rgba(6,182,212,0.2))' : 'transparent',
-            border: `1px solid ${mode === id ? 'rgba(124,58,237,0.6)' : 'var(--border-subtle)'}`,
-            color: mode === id ? '#f1f5f9' : 'var(--text-secondary)',
+            background: mode === id ? 'rgba(93,107,128,0.135)' : 'transparent',
+            border: `1px solid ${mode === id ? 'rgba(110,104,144,0.6)' : 'var(--border-subtle)'}`,
+            color: mode === id ? '#2b2926' : 'var(--text-secondary)',
           }}>{icon}{label}</button>
         ))}
       </div>

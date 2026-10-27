@@ -21,12 +21,12 @@ const IMPORTANCE: { value: number; label: string }[] = [
 ];
 
 const card: React.CSSProperties = {
-  background: 'rgba(255,255,255,0.02)', border: '1px solid var(--border-subtle)', borderRadius: '12px', padding: '1rem 1.1rem',
+  background: 'rgba(60,52,44,0.024)', border: '1px solid var(--border-subtle)', borderRadius: '12px', padding: '1rem 1.1rem',
 };
 const label: React.CSSProperties = { fontSize: '0.6rem', fontWeight: 700, letterSpacing: '0.1em', color: 'var(--text-tertiary)' };
 const select: React.CSSProperties = {
-  background: 'rgba(255,255,255,0.05)', border: '1px solid var(--border-subtle)', borderRadius: '7px',
-  color: '#f1f5f9', fontSize: '0.75rem', padding: '0.35rem 0.5rem', marginTop: '0.25rem', width: '100%',
+  background: 'rgba(60,52,44,0.06)', border: '1px solid var(--border-subtle)', borderRadius: '7px',
+  color: '#2b2926', fontSize: '0.75rem', padding: '0.35rem 0.5rem', marginTop: '0.25rem', width: '100%',
 };
 
 export function SimulationsPage() {
@@ -64,8 +64,8 @@ export function SimulationsPage() {
         <div style={{ fontSize: '0.65rem', letterSpacing: '0.12em', color: 'var(--text-tertiary)' }}>ENGINEERING ANALYSIS · REAL DATA</div>
         <h2 style={{ margin: '0.15rem 0 0', fontSize: '1.3rem', fontWeight: 700 }}>Simulations</h2>
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', marginTop: '0.25rem', fontSize: '0.75rem', color: 'var(--text-secondary)', flexWrap: 'wrap' }}>
-          <MapPin size={12} color="#06b6d4" />
-          <span style={{ color: '#06b6d4', fontWeight: 600 }}>{report?.site.label ?? state.district.name}</span>
+          <MapPin size={12} color="#4f7d78" />
+          <span style={{ color: '#4f7d78', fontWeight: 600 }}>{report?.site.label ?? state.district.name}</span>
           {report && <span style={{ color: 'var(--text-tertiary)' }}>· {report.site.lat.toFixed(4)}°N, {report.site.lon.toFixed(4)}°E ({report.site.source})</span>}
           <span style={{ color: 'var(--text-tertiary)' }}>· {floors} floor{floors !== 1 ? 's' : ''}</span>
         </div>
@@ -75,7 +75,7 @@ export function SimulationsPage() {
         {/* ── Seismic analysis ── */}
         <div style={card}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', marginBottom: '0.8rem' }}>
-            <div style={{ width: 38, height: 38, borderRadius: 10, background: '#ef444418', border: '1px solid #ef444440', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#ef4444' }}>
+            <div style={{ width: 38, height: 38, borderRadius: 10, background: '#b0604f18', border: '1px solid #b0604f40', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#b0604f' }}>
               <Activity size={18} />
             </div>
             <div style={{ flex: 1 }}>
@@ -86,7 +86,7 @@ export function SimulationsPage() {
             </div>
             <button onClick={run} disabled={running} style={{
               display: 'flex', alignItems: 'center', gap: '0.35rem', padding: '0.45rem 0.9rem', borderRadius: 8, fontSize: '0.75rem', fontWeight: 700,
-              background: '#ef444420', border: '1px solid #ef444450', color: '#f87171', cursor: running ? 'wait' : 'pointer',
+              background: '#b0604f20', border: '1px solid #b0604f50', color: '#9a5040', cursor: running ? 'wait' : 'pointer',
             }}>
               {running ? <Loader2 size={13} style={{ animation: 'spin 1s linear infinite' }} /> : <Play size={13} />}
               {running ? 'Fetching live data…' : 'Re-run'}
@@ -193,8 +193,8 @@ function AnalysisResult({ a }: { a: SeismicAnalysis }) {
             return (
               <div key={f.level} style={{ display: 'grid', gridTemplateColumns: '8rem 1fr 7rem 7rem 7rem', gap: '0.5rem', alignItems: 'center', fontSize: '0.7rem' }}>
                 <span style={{ color: 'var(--text-secondary)', whiteSpace: 'nowrap' }}>Level {f.level} · {lvl.h_m} m</span>
-                <div style={{ height: 8, background: 'rgba(255,255,255,0.05)', borderRadius: 4, overflow: 'hidden' }}>
-                  <div style={{ width: `${(f.V_kN / maxQ) * 100}%`, height: '100%', background: 'linear-gradient(90deg,#ef4444,#f59e0b)' }} />
+                <div style={{ height: 8, background: 'rgba(60,52,44,0.06)', borderRadius: 4, overflow: 'hidden' }}>
+                  <div style={{ width: `${(f.V_kN / maxQ) * 100}%`, height: '100%', background: 'linear-gradient(90deg,#b0604f,#a57c3a)' }} />
                 </div>
                 <span>W {lvl.W_kN} kN</span>
                 <span>Q {f.Q_kN} kN</span>
@@ -213,8 +213,8 @@ function AnalysisResult({ a }: { a: SeismicAnalysis }) {
         <div style={label}>CODE CHECKS</div>
         <div style={{ display: 'flex', flexDirection: 'column', gap: '0.3rem', marginTop: '0.4rem' }}>
           {a.checks.map((c, i) => (
-            <div key={i} style={{ display: 'flex', gap: '0.45rem', fontSize: '0.7rem', lineHeight: 1.45, color: c.ok ? 'var(--text-secondary)' : '#fbbf24' }}>
-              {c.ok ? <CheckCircle size={14} color="#10b981" style={{ flexShrink: 0, marginTop: 1 }} /> : <AlertTriangle size={14} color="#f59e0b" style={{ flexShrink: 0, marginTop: 1 }} />}
+            <div key={i} style={{ display: 'flex', gap: '0.45rem', fontSize: '0.7rem', lineHeight: 1.45, color: c.ok ? 'var(--text-secondary)' : '#8c6a2f' }}>
+              {c.ok ? <CheckCircle size={14} color="#5c7d59" style={{ flexShrink: 0, marginTop: 1 }} /> : <AlertTriangle size={14} color="#a57c3a" style={{ flexShrink: 0, marginTop: 1 }} />}
               <span><b>{c.rule}:</b> {c.detail}</span>
             </div>
           ))}
@@ -231,11 +231,11 @@ function QuakeHistory({ report }: { report: SeismicReport }) {
       <div style={label}>RECORDED EARTHQUAKES WITHIN {q.radius_km} KM</div>
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '0.6rem', marginTop: '0.4rem' }}>
         <Panel title={`USGS CATALOGUE · M ≥ 3 SINCE 1900 · ${q.usgs.length} EVENT${q.usgs.length === 1 ? '' : 'S'}`}>
-          {q.usgs_error ? <div style={{ fontSize: '0.68rem', color: '#f87171' }}>{q.usgs_error}</div>
+          {q.usgs_error ? <div style={{ fontSize: '0.68rem', color: '#9a5040' }}>{q.usgs_error}</div>
             : q.usgs.length === 0 ? <div style={{ fontSize: '0.68rem', color: 'var(--text-secondary)' }}>No M ≥ 3 events recorded in this radius — USGS coverage of South India before the 1970s is sparse.</div>
             : q.usgs.slice(0, 8).map((e, i) => (
               <a key={i} href={e.url} target="_blank" rel="noreferrer" style={{ display: 'flex', gap: '0.4rem', fontSize: '0.68rem', color: 'var(--text-secondary)', textDecoration: 'none', padding: '0.1rem 0' }}>
-                <b style={{ color: e.magnitude >= 5 ? '#ef4444' : '#f59e0b', width: '4.2rem' }}>M{e.magnitude.toFixed(1)} {e.mag_type}</b>
+                <b style={{ color: e.magnitude >= 5 ? '#b0604f' : '#a57c3a', width: '4.2rem' }}>M{e.magnitude.toFixed(1)} {e.mag_type}</b>
                 <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{e.place}</span>
                 <span style={{ color: 'var(--text-tertiary)' }}>{new Date(e.time).getFullYear()} · {e.distance_km} km</span>
               </a>
@@ -245,7 +245,7 @@ function QuakeHistory({ report }: { report: SeismicReport }) {
           {q.map_events.length === 0 ? <div style={{ fontSize: '0.68rem', color: 'var(--text-secondary)' }}>None within {q.radius_km} km.</div>
             : q.map_events.map((e, i) => (
               <div key={i} style={{ display: 'flex', gap: '0.4rem', fontSize: '0.68rem', color: 'var(--text-secondary)', padding: '0.1rem 0' }}>
-                <b style={{ color: e.magnitude >= 6 ? '#ef4444' : '#f59e0b', width: '3.2rem' }}>M{e.magnitude.toFixed(1)}</b>
+                <b style={{ color: e.magnitude >= 6 ? '#b0604f' : '#a57c3a', width: '3.2rem' }}>M{e.magnitude.toFixed(1)}</b>
                 <span style={{ flex: 1 }}>{e.year} · {e.lat.toFixed(2)}°N, {e.lon.toFixed(2)}°E</span>
                 <span style={{ color: 'var(--text-tertiary)' }}>{e.distance_km} km</span>
               </div>
@@ -267,7 +267,7 @@ function Sources({ report, analysis }: { report: SeismicReport; analysis: Seismi
         <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.68rem', marginTop: '0.5rem' }}>
           <tbody>
             {analysis.inputs.map(i => (
-              <tr key={i.name} style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+              <tr key={i.name} style={{ borderBottom: '1px solid rgba(60,52,44,0.06)' }}>
                 <td style={{ padding: '0.3rem 0.4rem', color: 'var(--text-secondary)' }}>{i.name}</td>
                 <td style={{ padding: '0.3rem 0.4rem', fontWeight: 700 }}>{String(i.value)}</td>
                 <td style={{ padding: '0.3rem 0.4rem', color: 'var(--text-tertiary)' }}>{i.source}</td>
@@ -277,7 +277,7 @@ function Sources({ report, analysis }: { report: SeismicReport; analysis: Seismi
         </table>
       )}
       {analysis && (
-        <div style={{ fontSize: '0.66rem', color: '#fbbf24', marginTop: '0.5rem', lineHeight: 1.6 }}>
+        <div style={{ fontSize: '0.66rem', color: '#8c6a2f', marginTop: '0.5rem', lineHeight: 1.6 }}>
           Engineering assumptions (not code values): {analysis.assumptions.join(' · ')}
         </div>
       )}
@@ -316,7 +316,7 @@ function SiteClimate() {
   return (
     <div style={card}>
       <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', marginBottom: '0.7rem' }}>
-        <div style={{ width: 38, height: 38, borderRadius: 10, background: '#f59e0b18', border: '1px solid #f59e0b40', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#f59e0b' }}>
+        <div style={{ width: 38, height: 38, borderRadius: 10, background: '#a57c3a18', border: '1px solid #a57c3a40', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#a57c3a' }}>
           <Thermometer size={18} />
         </div>
         <div>
@@ -343,9 +343,9 @@ function SiteClimate() {
 
 /* ── Small pieces ── */
 function Panel({ title, tone, children }: { title: string; tone?: 'ok' | 'warn'; children: React.ReactNode }) {
-  const c = tone === 'warn' ? '#f59e0b' : tone === 'ok' ? '#10b981' : 'var(--border-subtle)';
+  const c = tone === 'warn' ? '#a57c3a' : tone === 'ok' ? '#5c7d59' : 'var(--border-subtle)';
   return (
-    <div style={{ border: '1px solid var(--border-subtle)', borderLeft: `3px solid ${c}`, borderRadius: 8, padding: '0.6rem 0.75rem', background: 'rgba(255,255,255,0.02)' }}>
+    <div style={{ border: '1px solid var(--border-subtle)', borderLeft: `3px solid ${c}`, borderRadius: 8, padding: '0.6rem 0.75rem', background: 'rgba(60,52,44,0.024)' }}>
       <div style={{ ...label, marginBottom: '0.3rem' }}>{title}</div>
       {children}
     </div>
@@ -354,9 +354,9 @@ function Panel({ title, tone, children }: { title: string; tone?: 'ok' | 'warn';
 
 function Stat({ label: l, value, unit, sub, accent }: { label: string; value: string; unit: string; sub?: string; accent?: boolean }) {
   return (
-    <div style={{ background: accent ? 'rgba(239,68,68,0.08)' : 'rgba(255,255,255,0.03)', border: `1px solid ${accent ? 'rgba(239,68,68,0.35)' : 'rgba(255,255,255,0.06)'}`, borderRadius: 8, padding: '0.5rem 0.6rem' }}>
+    <div style={{ background: accent ? 'rgba(176,96,79,0.08)' : 'rgba(60,52,44,0.036)', border: `1px solid ${accent ? 'rgba(176,96,79,0.35)' : 'rgba(60,52,44,0.072)'}`, borderRadius: 8, padding: '0.5rem 0.6rem' }}>
       <div style={label}>{l}</div>
-      <div style={{ fontSize: '1.15rem', fontWeight: 800, color: '#f1f5f9', marginTop: '0.15rem' }}>
+      <div style={{ fontSize: '1.15rem', fontWeight: 800, color: '#2b2926', marginTop: '0.15rem' }}>
         {value}<span style={{ fontSize: '0.65rem', color: 'var(--text-tertiary)', marginLeft: 3 }}>{unit}</span>
       </div>
       {sub && <div style={{ fontSize: '0.6rem', color: 'var(--text-tertiary)', marginTop: '0.1rem' }}>{sub}</div>}
@@ -365,10 +365,10 @@ function Stat({ label: l, value, unit, sub, accent }: { label: string; value: st
 }
 
 function Banner({ tone, children }: { tone: 'error' | 'warn'; children: React.ReactNode }) {
-  const c = tone === 'error' ? '#f87171' : '#fbbf24';
+  const c = tone === 'error' ? '#9a5040' : '#8c6a2f';
   return <div style={{ marginTop: '0.7rem', fontSize: '0.72rem', color: c, background: `${c}14`, border: `1px solid ${c}40`, borderRadius: 8, padding: '0.5rem 0.65rem' }}>{children}</div>;
 }
 
 function SourceLink({ href }: { href: string }) {
-  return <a href={href} target="_blank" rel="noreferrer" style={{ color: '#06b6d4', display: 'inline-flex', alignItems: 'center', gap: 2 }}>source <ExternalLink size={10} /></a>;
+  return <a href={href} target="_blank" rel="noreferrer" style={{ color: '#4f7d78', display: 'inline-flex', alignItems: 'center', gap: 2 }}>source <ExternalLink size={10} /></a>;
 }

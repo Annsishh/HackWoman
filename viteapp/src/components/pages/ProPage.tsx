@@ -47,7 +47,7 @@ function Pricing({ onOpen }: { onOpen: () => void }) {
       </div>
       <div style={{ flex: 1, overflowY: 'auto', padding: '2rem', display: 'flex', justifyContent: 'center' }}>
         <div style={{ display: 'flex', gap: '1.25rem', width: '100%', maxWidth: '860px', alignItems: 'stretch' }}>
-          <div style={{ flex: 1, background: 'rgba(255,255,255,0.02)', border: '1px solid var(--border-subtle)', borderRadius: '16px', padding: '1.75rem', display: 'flex', flexDirection: 'column' }}>
+          <div style={{ flex: 1, background: 'rgba(60,52,44,0.024)', border: '1px solid var(--border-subtle)', borderRadius: '16px', padding: '1.75rem', display: 'flex', flexDirection: 'column' }}>
             <div style={{ fontSize: '0.6rem', letterSpacing: '0.12em', color: 'var(--text-tertiary)', marginBottom: '0.5rem' }}>CURRENT PLAN</div>
             <div style={{ fontSize: '1.2rem', fontWeight: 700, marginBottom: '0.25rem' }}>Free</div>
             <div style={{ fontSize: '2rem', fontWeight: 800, marginBottom: '0.25rem' }}>₹0</div>
@@ -55,27 +55,27 @@ function Pricing({ onOpen }: { onOpen: () => void }) {
             <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
               {FREE_FEATURES.map(f => (
                 <div key={f} style={{ display: 'flex', alignItems: 'flex-start', gap: '0.6rem', fontSize: '0.78rem', color: 'var(--text-secondary)' }}>
-                  <Check size={13} color="#10b981" style={{ flexShrink: 0, marginTop: '1px' }} />{f}
+                  <Check size={13} color="#5c7d59" style={{ flexShrink: 0, marginTop: '1px' }} />{f}
                 </div>
               ))}
             </div>
           </div>
-          <div style={{ flex: 1, background: 'linear-gradient(145deg, rgba(124,58,237,0.1), rgba(6,182,212,0.06))', border: '1px solid rgba(124,58,237,0.4)', borderRadius: '16px', padding: '1.75rem', display: 'flex', flexDirection: 'column' }}>
+          <div style={{ flex: 1, background: 'rgba(93,107,128,0.045)', border: '1px solid rgba(110,104,144,0.4)', borderRadius: '16px', padding: '1.75rem', display: 'flex', flexDirection: 'column' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.5rem' }}>
-              <Crown size={14} color="#f59e0b" fill="#f59e0b" />
-              <div style={{ fontSize: '0.6rem', letterSpacing: '0.12em', color: '#f59e0b', fontWeight: 700 }}>RECOMMENDED</div>
+              <Crown size={14} color="#a57c3a" fill="#a57c3a" />
+              <div style={{ fontSize: '0.6rem', letterSpacing: '0.12em', color: '#a57c3a', fontWeight: 700 }}>RECOMMENDED</div>
             </div>
-            <div style={{ fontSize: '1.2rem', fontWeight: 700, marginBottom: '0.25rem', color: '#a78bfa' }}>Pro</div>
+            <div style={{ fontSize: '1.2rem', fontWeight: 700, marginBottom: '0.25rem', color: '#5f5a80' }}>Pro</div>
             <div style={{ fontSize: '2rem', fontWeight: 800, marginBottom: '0.25rem' }}>₹{PRO_PRICE_INR.toLocaleString('en-IN')}</div>
             <div style={{ fontSize: '0.75rem', color: 'var(--text-tertiary)', marginBottom: '1.5rem' }}>per month</div>
             <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
               {PRO_FEATURES.map(f => (
                 <div key={f} style={{ display: 'flex', alignItems: 'flex-start', gap: '0.6rem', fontSize: '0.78rem', color: 'var(--text-secondary)' }}>
-                  <Check size={13} color="#a78bfa" style={{ flexShrink: 0, marginTop: '1px' }} />{f}
+                  <Check size={13} color="#5f5a80" style={{ flexShrink: 0, marginTop: '1px' }} />{f}
                 </div>
               ))}
             </div>
-            <button onClick={onOpen} style={{ marginTop: '1.5rem', padding: '0.75rem', background: 'linear-gradient(135deg,#7c3aed,#06b6d4)', border: 'none', borderRadius: '10px', color: '#fff', fontSize: '0.85rem', fontWeight: 700, cursor: 'pointer' }}>
+            <button onClick={onOpen} style={{ marginTop: '1.5rem', padding: '0.75rem', background: '#5d6b80', border: 'none', borderRadius: '10px', color: '#fff', fontSize: '0.85rem', fontWeight: 700, cursor: 'pointer' }}>
               Open Pro workspace
             </button>
             <div style={{ textAlign: 'center', fontSize: '0.68rem', color: 'var(--text-tertiary)', marginTop: '0.5rem' }}>
@@ -100,19 +100,19 @@ export function ProPage() {
   return (
     <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden', minWidth: 0 }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '0.45rem 1rem', borderBottom: '1px solid var(--border-subtle)', background: 'var(--bg-primary)' }}>
-        <button onClick={() => setOpen(false)} title="Plans" style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid var(--border-subtle)', borderRadius: '8px', padding: '0.3rem 0.55rem', color: 'var(--text-secondary)', cursor: 'pointer', display: 'flex' }}>
+        <button onClick={() => setOpen(false)} title="Plans" style={{ background: 'rgba(60,52,44,0.048)', border: '1px solid var(--border-subtle)', borderRadius: '8px', padding: '0.3rem 0.55rem', color: 'var(--text-secondary)', cursor: 'pointer', display: 'flex' }}>
           <ArrowLeft size={13} />
         </button>
-        <span style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', fontSize: '0.68rem', fontWeight: 700, color: '#a78bfa' }}>
-          <Crown size={12} color="#f59e0b" fill="#f59e0b" /> PRO
+        <span style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', fontSize: '0.68rem', fontWeight: 700, color: '#5f5a80' }}>
+          <Crown size={12} color="#a57c3a" fill="#a57c3a" /> PRO
         </span>
         <div style={{ display: 'flex', gap: '0.25rem' }}>
           {TABS.map(t => (
             <button key={t.id} onClick={() => setTab(t.id)} style={{
               display: 'flex', alignItems: 'center', gap: '0.35rem', padding: '0.4rem 0.8rem', borderRadius: '8px', fontSize: '0.74rem', fontWeight: 700, cursor: 'pointer',
-              background: tab === t.id ? 'linear-gradient(135deg, rgba(124,58,237,0.3), rgba(6,182,212,0.2))' : 'transparent',
-              border: `1px solid ${tab === t.id ? 'rgba(124,58,237,0.6)' : 'transparent'}`,
-              color: tab === t.id ? '#f1f5f9' : 'var(--text-secondary)',
+              background: tab === t.id ? 'rgba(93,107,128,0.135)' : 'transparent',
+              border: `1px solid ${tab === t.id ? 'rgba(110,104,144,0.6)' : 'transparent'}`,
+              color: tab === t.id ? '#2b2926' : 'var(--text-secondary)',
             }}>{t.icon}{t.label}</button>
           ))}
         </div>

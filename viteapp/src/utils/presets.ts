@@ -14,17 +14,17 @@ const bed = (n: number): PresetRoom[] =>
 const bath = (n: number): PresetRoom[] => Array.from({ length: n }, () => ({ type: 'bathroom' }));
 
 export const PRESETS: Preset[] = [
-  { id: '1bhk', label: '1BHK', emoji: '🏠', color: '#8b5cf6', desc: '1 bed · hall · kitchen · bath',
+  { id: '1bhk', label: '1BHK', emoji: '🏠', color: '#6e6890', desc: '1 bed · hall · kitchen · bath',
     rooms: [...bed(1), { type: 'living', name: 'Hall' }, { type: 'kitchen', name: 'Kitchen' }, ...bath(1)] },
-  { id: '2bhk', label: '2BHK', emoji: '🏡', color: '#06b6d4', desc: '2 bed · hall · kitchen · 2 bath',
+  { id: '2bhk', label: '2BHK', emoji: '🏡', color: '#4f7d78', desc: '2 bed · hall · kitchen · 2 bath',
     rooms: [...bed(2), { type: 'living', name: 'Hall' }, { type: 'kitchen', name: 'Kitchen' }, ...bath(2)] },
-  { id: '3bhk', label: '3BHK', emoji: '🏗', color: '#10b981', desc: '3 bed · hall · kitchen · dining · 2 bath',
+  { id: '3bhk', label: '3BHK', emoji: '🏗', color: '#5c7d59', desc: '3 bed · hall · kitchen · dining · 2 bath',
     rooms: [...bed(3), { type: 'living', name: 'Hall' }, { type: 'kitchen', name: 'Kitchen' }, { type: 'dining', name: 'Dining' }, ...bath(2)] },
-  { id: '4bhk', label: '4BHK', emoji: '🏢', color: '#a855f7', desc: '4 bed · hall · kitchen · dining · 3 bath',
+  { id: '4bhk', label: '4BHK', emoji: '🏢', color: '#6e6890', desc: '4 bed · hall · kitchen · dining · 3 bath',
     rooms: [...bed(4), { type: 'living', name: 'Hall' }, { type: 'kitchen', name: 'Kitchen' }, { type: 'dining', name: 'Dining' }, ...bath(3)] },
-  { id: 'studio', label: 'Studio', emoji: '🛖', color: '#ec4899', desc: 'open room · kitchenette · bath',
+  { id: 'studio', label: 'Studio', emoji: '🛖', color: '#9e5e70', desc: 'open room · kitchenette · bath',
     rooms: [{ type: 'living', name: 'Studio Room' }, { type: 'kitchen', name: 'Kitchenette' }, ...bath(1)] },
-  { id: 'office', label: 'Office Floor', emoji: '💼', color: '#f97316', desc: '4 offices · 1 bath · store',
+  { id: 'office', label: 'Office Floor', emoji: '💼', color: '#a8714a', desc: '4 offices · 1 bath · store',
     rooms: [...[1, 2, 3, 4].map((): PresetRoom => ({ type: 'office' })), ...bath(1), { type: 'store' }] },
 ];
 

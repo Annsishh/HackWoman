@@ -67,6 +67,20 @@ class ExistingFeatureTests(unittest.TestCase):
         self.assertEqual(len(store.draft().floors), 1)
         self.assertEqual(store.main().floors, [])
 
+    def test_ml_structural_risk(self):
+        r = self.client.get("/api/analysis/structural-risk").json()
+        self.assertIsNone(r["risk"])  # nothing to score yet
+        self.assertTrue(r["model_loaded"])
+        chat = self.client.post("/api/chat", json={"message": "add a floor"}).json()
+        self.assertIsNotNone(chat["structuralRisk"])
+        self.assertTrue(0 <= chat["structuralRisk"] <= 1)
+        r = self.client.get("/api/analysis/structural-risk").json()
+        self.assertAlmostEqual(r["risk"], chat["structuralRisk"])
+        # Taller buildings score higher
+        for _ in range(3):
+            self.client.post("/api/chat", json={"message": "add a floor"})
+        self.assertGreater(self.client.get("/api/analysis/structural-risk").json()["risk"], r["risk"])
+
     def test_reset_in_main_keeps_the_draft(self):
         self.client.post("/api/design/generate", json={"prompt": "1bhk"})
         self.assertIsNotNone(store.draft())

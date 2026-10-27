@@ -21,8 +21,8 @@ const EXAMPLES = [
 
 const label: React.CSSProperties = { fontSize: '0.6rem', fontWeight: 700, letterSpacing: '0.1em', color: 'var(--text-tertiary)' };
 const input: React.CSSProperties = {
-  width: '100%', boxSizing: 'border-box', padding: '0.45rem 0.6rem', background: 'rgba(255,255,255,0.04)',
-  border: '1px solid var(--border-subtle)', borderRadius: '8px', color: '#f1f5f9', fontSize: '0.78rem', fontFamily: 'inherit',
+  width: '100%', boxSizing: 'border-box', padding: '0.45rem 0.6rem', background: 'rgba(60,52,44,0.048)',
+  border: '1px solid var(--border-subtle)', borderRadius: '8px', color: '#2b2926', fontSize: '0.78rem', fontFamily: 'inherit',
 };
 
 function Note({ tone, icon, children }: { tone: string; icon: ReactNode; children: ReactNode }) {
@@ -73,7 +73,7 @@ function BriefPanel({ onGenerate, busy, result, error }: {
           {EXAMPLES.map(ex => (
             <button key={ex} type="button" onClick={() => setPrompt(ex)} style={{
               fontSize: '0.62rem', padding: '0.2rem 0.5rem', borderRadius: '20px', cursor: 'pointer',
-              background: 'rgba(124,58,237,0.08)', border: '1px solid rgba(124,58,237,0.3)', color: '#c4b5fd',
+              background: 'rgba(110,104,144,0.08)', border: '1px solid rgba(110,104,144,0.3)', color: '#5f5a80',
             }}>{ex}</button>
           ))}
         </div>
@@ -100,7 +100,7 @@ function BriefPanel({ onGenerate, busy, result, error }: {
         </details>
         <button type="submit" disabled={busy || prompt.trim().length < 3} style={{
           display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.45rem', padding: '0.65rem',
-          background: 'linear-gradient(135deg,#7c3aed,#06b6d4)', border: 'none', borderRadius: '10px', color: '#fff',
+          background: '#5d6b80', border: 'none', borderRadius: '10px', color: '#fff',
           fontSize: '0.82rem', fontWeight: 700, cursor: busy ? 'wait' : 'pointer', opacity: busy || prompt.trim().length < 3 ? 0.6 : 1,
         }}>
           {busy ? <Loader2 size={15} style={{ animation: 'spin 1s linear infinite' }} /> : <Sparkles size={15} />}
@@ -109,25 +109,25 @@ function BriefPanel({ onGenerate, busy, result, error }: {
         <style>{'@keyframes spin { to { transform: rotate(360deg); } }'}</style>
       </form>
 
-      {error && <Note tone="#ef4444" icon={<X size={13} />}>{error}</Note>}
+      {error && <Note tone="#b0604f" icon={<X size={13} />}>{error}</Note>}
 
       {result && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.7rem' }}>
-            <span style={{ fontWeight: 700, color: result.feasible ? '#10b981' : '#ef4444' }}>
+            <span style={{ fontWeight: 700, color: result.feasible ? '#5c7d59' : '#b0604f' }}>
               {result.feasible ? 'Design generated' : 'No design generated'}
             </span>
             <span style={{ color: 'var(--text-tertiary)' }}>
               · brief read by {result.parser === 'gemini' ? 'Gemini AI' : 'built-in rules'} · {result.searched} layout(s) built and checked
             </span>
           </div>
-          <List title="NOTES" items={result.notes} tone="#94a3b8" icon={<Info size={12} />} />
-          <List title="WHY IT ISN'T POSSIBLE" items={result.reasons} tone="#ef4444" icon={<X size={12} />} />
-          <List title="PLEASE TELL ME" items={result.missing} tone="#f59e0b" icon={<AlertTriangle size={12} />} />
-          <List title="WHY THIS DESIGN" items={result.why ?? []} tone="#10b981" icon={<Check size={12} />} />
-          <List title="TAKEN FROM YOUR CURRENT SETUP" items={result.from_setup} tone="#06b6d4" icon={<Info size={12} />} />
-          <List title="ASSUMPTIONS" items={result.assumptions} tone="#a78bfa" icon={<Info size={12} />} />
-          <List title="WARNINGS" items={result.warnings} tone="#f59e0b" icon={<AlertTriangle size={12} />} />
+          <List title="NOTES" items={result.notes} tone="#6b665e" icon={<Info size={12} />} />
+          <List title="WHY IT ISN'T POSSIBLE" items={result.reasons} tone="#b0604f" icon={<X size={12} />} />
+          <List title="PLEASE TELL ME" items={result.missing} tone="#a57c3a" icon={<AlertTriangle size={12} />} />
+          <List title="WHY THIS DESIGN" items={result.why ?? []} tone="#5c7d59" icon={<Check size={12} />} />
+          <List title="TAKEN FROM YOUR CURRENT SETUP" items={result.from_setup} tone="#4f7d78" icon={<Info size={12} />} />
+          <List title="ASSUMPTIONS" items={result.assumptions} tone="#5f5a80" icon={<Info size={12} />} />
+          <List title="WARNINGS" items={result.warnings} tone="#a57c3a" icon={<AlertTriangle size={12} />} />
           <div>
             <div style={label}>REQUIREMENTS AS UNDERSTOOD</div>
             <div style={{ fontSize: '0.7rem', color: 'var(--text-secondary)', lineHeight: 1.6, marginTop: '0.25rem' }}>
@@ -170,9 +170,9 @@ function DraftChecks({ onApply, onDiscard, busy }: { onApply: () => void; onDisc
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '0.55rem', padding: '0.75rem', borderRadius: '12px',
-      background: 'linear-gradient(135deg, rgba(124,58,237,0.08), rgba(6,182,212,0.05))', border: '1px solid rgba(124,58,237,0.3)' }}>
-      <div style={{ ...label, color: '#c4b5fd' }}>GENERATED DESIGN — NOT YET YOUR BUILDING</div>
-      {err && <Note tone="#ef4444" icon={<X size={12} />}>{err}</Note>}
+      background: 'rgba(93,107,128,0.036)', border: '1px solid rgba(110,104,144,0.3)' }}>
+      <div style={{ ...label, color: '#5f5a80' }}>GENERATED DESIGN — NOT YET YOUR BUILDING</div>
+      {err && <Note tone="#b0604f" icon={<X size={12} />}>{err}</Note>}
       {ev && (
         <>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.4rem', fontSize: '0.7rem' }}>
@@ -182,9 +182,9 @@ function DraftChecks({ onApply, onDiscard, busy }: { onApply: () => void; onDisc
               ['Floors · rooms', `${ev.floors} · ${ev.rooms}`],
               ['IS 1893 VB/W', ev.seismic_demand === null ? '—' : `${(ev.seismic_demand * 100).toFixed(1)} %`],
             ].map(([k, v]) => (
-              <div key={k} style={{ background: 'rgba(255,255,255,0.03)', borderRadius: '8px', padding: '0.4rem 0.5rem' }}>
+              <div key={k} style={{ background: 'rgba(60,52,44,0.036)', borderRadius: '8px', padding: '0.4rem 0.5rem' }}>
                 <div style={{ color: 'var(--text-tertiary)', fontSize: '0.6rem' }}>{k}</div>
-                <div style={{ fontWeight: 700, color: '#f1f5f9' }}>{v}</div>
+                <div style={{ fontWeight: 700, color: '#2b2926' }}>{v}</div>
               </div>
             ))}
           </div>
@@ -194,21 +194,21 @@ function DraftChecks({ onApply, onDiscard, busy }: { onApply: () => void; onDisc
             </div>
           )}
           {ev.valid
-            ? <Note tone="#10b981" icon={<ShieldCheck size={12} />}>Passes every check: budget, room fit, compliance, structure{ev.code_warnings.length ? '' : ' and IS 1893'}.</Note>
-            : ev.issues.map(i => <Note key={i} tone="#ef4444" icon={<X size={12} />}>{i}</Note>)}
-          {ev.code_warnings.map(w => <Note key={w.rule} tone="#f59e0b" icon={<AlertTriangle size={12} />}>IS 1893 {w.rule}: {w.detail}</Note>)}
-          {ev.boq_approximate && <Note tone="#94a3b8" icon={<Info size={12} />}>{ev.boq_notes[0]}</Note>}
+            ? <Note tone="#5c7d59" icon={<ShieldCheck size={12} />}>Passes every check: budget, room fit, compliance, structure{ev.code_warnings.length ? '' : ' and IS 1893'}.</Note>
+            : ev.issues.map(i => <Note key={i} tone="#b0604f" icon={<X size={12} />}>{i}</Note>)}
+          {ev.code_warnings.map(w => <Note key={w.rule} tone="#a57c3a" icon={<AlertTriangle size={12} />}>IS 1893 {w.rule}: {w.detail}</Note>)}
+          {ev.boq_approximate && <Note tone="#6b665e" icon={<Info size={12} />}>{ev.boq_notes[0]}</Note>}
         </>
       )}
       <div style={{ display: 'flex', gap: '0.45rem' }}>
         <button onClick={onApply} disabled={!ev?.valid || busy !== null} title={ev?.valid ? 'Replace your building with this design' : 'Fix the issues above first'} style={{
           flex: 1, padding: '0.55rem', borderRadius: '9px', border: 'none', fontWeight: 700, fontSize: '0.76rem',
-          background: ev?.valid ? '#10b981' : 'rgba(255,255,255,0.08)', color: ev?.valid ? '#04140d' : 'var(--text-tertiary)',
+          background: ev?.valid ? '#5c7d59' : 'rgba(60,52,44,0.096)', color: ev?.valid ? '#ffffff' : 'var(--text-tertiary)',
           cursor: ev?.valid && !busy ? 'pointer' : 'not-allowed',
         }}>{busy === 'apply' ? 'Applying…' : 'Apply as my building'}</button>
         <button onClick={onDiscard} disabled={busy !== null} style={{
           padding: '0.55rem 0.8rem', borderRadius: '9px', fontWeight: 700, fontSize: '0.76rem', cursor: 'pointer',
-          background: 'transparent', border: '1px solid rgba(239,68,68,0.4)', color: '#fca5a5',
+          background: 'transparent', border: '1px solid rgba(176,96,79,0.4)', color: '#7f3f32',
         }}>{busy === 'discard' ? '…' : 'Discard'}</button>
       </div>
     </div>
@@ -228,16 +228,16 @@ function Column({ tabs }: { tabs: [string, string, ReactNode, ReactNode][] }) {
   const [tab, setTab] = useState(tabs[0][0]);
   return (
     <div style={{ width: '360px', flexShrink: 0, display: 'flex', flexDirection: 'column', height: '100%',
-      background: '#0d0d14', borderRight: '1px solid var(--border-subtle)' }}>
+      background: '#fbfaf7', borderRight: '1px solid var(--border-subtle)' }}>
       {tabs.length > 1 && (
         <div style={{ display: 'flex', gap: '0.3rem', padding: '0.6rem 0.85rem', borderBottom: '1px solid var(--border-subtle)' }}>
           {tabs.map(([id, text, icon]) => (
             <button key={id} onClick={() => setTab(id)} style={{
               flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.4rem', padding: '0.5rem',
               borderRadius: '8px', fontSize: '0.74rem', fontWeight: 700, cursor: 'pointer',
-              background: tab === id ? 'linear-gradient(135deg, rgba(124,58,237,0.3), rgba(6,182,212,0.2))' : 'transparent',
-              border: `1px solid ${tab === id ? 'rgba(124,58,237,0.6)' : 'var(--border-subtle)'}`,
-              color: tab === id ? '#f1f5f9' : 'var(--text-secondary)',
+              background: tab === id ? 'rgba(93,107,128,0.135)' : 'transparent',
+              border: `1px solid ${tab === id ? 'rgba(110,104,144,0.6)' : 'var(--border-subtle)'}`,
+              color: tab === id ? '#2b2926' : 'var(--text-secondary)',
             }}>{icon}{text}</button>
           ))}
         </div>
@@ -318,8 +318,8 @@ export function DesignGenerator({ onApplied }: { onApplied: () => void }) {
         <Column tabs={[['brief', 'Brief', <FileText key="b" size={14} />, brief]]} />
         <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '2rem' }}>
           <div style={{ maxWidth: '440px', textAlign: 'center', color: 'var(--text-tertiary)', fontSize: '0.8rem', lineHeight: 1.7 }}>
-            <Sparkles size={28} color="#a78bfa" style={{ marginBottom: '0.75rem' }} />
-            <div style={{ color: '#f1f5f9', fontWeight: 700, fontSize: '1rem', marginBottom: '0.4rem' }}>Describe your home, get a complete design</div>
+            <Sparkles size={28} color="#5f5a80" style={{ marginBottom: '0.75rem' }} />
+            <div style={{ color: '#2b2926', fontWeight: 700, fontSize: '1rem', marginBottom: '0.4rem' }}>Describe your home, get a complete design</div>
             Every candidate is built with the same engine as the editor, priced from the KPWD Schedule of Rates and checked
             against your budget, the compliance and structural rules and IS 1893. The best one opens here as an editable
             draft — your current building isn't touched until you apply it.

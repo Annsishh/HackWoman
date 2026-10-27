@@ -67,9 +67,9 @@ export function LoginPage() {
   const inputStyle: React.CSSProperties = {
     width: '100%', boxSizing: 'border-box',
     padding: '0.75rem 1rem 0.75rem 2.6rem',
-    background: 'rgba(255,255,255,0.04)',
-    border: '1px solid rgba(255,255,255,0.1)',
-    borderRadius: '10px', color: '#f1f5f9',
+    background: 'rgba(60,52,44,0.048)',
+    border: '1px solid rgba(60,52,44,0.12)',
+    borderRadius: '10px', color: '#2b2926',
     fontSize: '0.88rem', outline: 'none',
     fontFamily: 'inherit', transition: 'border-color 0.2s',
   };
@@ -77,35 +77,35 @@ export function LoginPage() {
   return (
     <div style={{
       position: 'fixed', inset: 0, zIndex: 2000,
-      background: '#080810',
+      background: '#f4f1ec',
       display: 'flex', alignItems: 'center', justifyContent: 'center',
     }}>
       {/* Background grid */}
       <div style={{
         position: 'absolute', inset: 0, pointerEvents: 'none',
-        backgroundImage: 'linear-gradient(rgba(124,58,237,0.04) 1px,transparent 1px),linear-gradient(90deg,rgba(124,58,237,0.04) 1px,transparent 1px)',
+        backgroundImage: 'linear-gradient(rgba(110,104,144,0.04) 1px,transparent 1px),linear-gradient(90deg,rgba(110,104,144,0.04) 1px,transparent 1px)',
         backgroundSize: '48px 48px',
       }} />
       {/* Glow */}
       <div style={{ position: 'absolute', top: '30%', left: '50%', transform: 'translate(-50%,-50%)', width: '600px', height: '400px', pointerEvents: 'none',
-        background: 'radial-gradient(ellipse, rgba(124,58,237,0.12) 0%, transparent 70%)' }} />
+        background: 'radial-gradient(ellipse, rgba(110,104,144,0.12) 0%, transparent 70%)' }} />
 
       <div style={{
         position: 'relative', width: '100%', maxWidth: '420px', margin: '0 1rem',
-        background: 'rgba(13,13,22,0.95)', border: '1px solid rgba(124,58,237,0.2)',
+        background: 'rgba(255,255,255,0.95)', border: '1px solid rgba(110,104,144,0.2)',
         borderRadius: '20px', padding: '2.5rem',
-        boxShadow: '0 24px 64px rgba(0,0,0,0.6), 0 0 0 1px rgba(124,58,237,0.1)',
+        boxShadow: '0 24px 64px rgba(60,52,44,0.21), 0 0 0 1px rgba(110,104,144,0.1)',
         backdropFilter: 'blur(24px)',
       }}>
         {/* Logo */}
         <div style={{ textAlign: 'center', marginBottom: '2rem' }}>
           <div style={{ fontSize: '1.3rem', fontWeight: 800, letterSpacing: '0.04em', marginBottom: '0.35rem' }}>
-            निर्माण <span style={{ color: '#06b6d4' }}>AI</span>
+            निर्माण <span style={{ color: '#4f7d78' }}>AI</span>
           </div>
-          <div style={{ fontSize: '1.1rem', fontWeight: 700, color: '#f1f5f9', marginBottom: '0.25rem' }}>
+          <div style={{ fontSize: '1.1rem', fontWeight: 700, color: '#2b2926', marginBottom: '0.25rem' }}>
             {mode === 'login' ? 'Welcome back' : 'Create account'}
           </div>
-          <div style={{ fontSize: '0.78rem', color: 'rgba(255,255,255,0.4)' }}>
+          <div style={{ fontSize: '0.78rem', color: 'rgba(60,52,44,0.4)' }}>
             {mode === 'login' ? 'Sign in to your workspace' : 'Start designing smarter buildings'}
           </div>
         </div>
@@ -114,7 +114,7 @@ export function LoginPage() {
           {/* Name (signup only) */}
           {mode === 'signup' && (
             <div style={{ position: 'relative' }}>
-              <User size={15} color="rgba(255,255,255,0.3)" style={{ position: 'absolute', left: '0.85rem', top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none' }} />
+              <User size={15} color="rgba(60,52,44,0.3)" style={{ position: 'absolute', left: '0.85rem', top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none' }} />
               <input type="text" placeholder="Full name" value={name} onChange={e => setName(e.target.value)}
                 style={inputStyle} autoComplete="name" />
             </div>
@@ -122,19 +122,19 @@ export function LoginPage() {
 
           {/* Email */}
           <div style={{ position: 'relative' }}>
-            <Mail size={15} color="rgba(255,255,255,0.3)" style={{ position: 'absolute', left: '0.85rem', top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none' }} />
+            <Mail size={15} color="rgba(60,52,44,0.3)" style={{ position: 'absolute', left: '0.85rem', top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none' }} />
             <input type="email" placeholder="Email address" value={email} onChange={e => setEmail(e.target.value)}
               style={inputStyle} autoComplete="email" required />
           </div>
 
           {/* Password */}
           <div style={{ position: 'relative' }}>
-            <Lock size={15} color="rgba(255,255,255,0.3)" style={{ position: 'absolute', left: '0.85rem', top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none' }} />
+            <Lock size={15} color="rgba(60,52,44,0.3)" style={{ position: 'absolute', left: '0.85rem', top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none' }} />
             <input type={showPw ? 'text' : 'password'} placeholder="Password" value={password} onChange={e => setPassword(e.target.value)}
               style={{ ...inputStyle, paddingRight: '2.8rem' }} autoComplete={mode === 'login' ? 'current-password' : 'new-password'} required />
             <button type="button" onClick={() => setShowPw(v => !v)} style={{
               position: 'absolute', right: '0.85rem', top: '50%', transform: 'translateY(-50%)',
-              background: 'none', border: 'none', cursor: 'pointer', padding: 0, color: 'rgba(255,255,255,0.3)', display: 'flex',
+              background: 'none', border: 'none', cursor: 'pointer', padding: 0, color: 'rgba(60,52,44,0.3)', display: 'flex',
             }}>
               {showPw ? <EyeOff size={15} /> : <Eye size={15} />}
             </button>
@@ -142,7 +142,7 @@ export function LoginPage() {
 
           {/* Error */}
           {error && (
-            <div style={{ display: 'flex', alignItems: 'flex-start', gap: '0.5rem', background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.25)', borderRadius: '8px', padding: '0.6rem 0.75rem', fontSize: '0.75rem', color: '#f87171' }}>
+            <div style={{ display: 'flex', alignItems: 'flex-start', gap: '0.5rem', background: 'rgba(176,96,79,0.1)', border: '1px solid rgba(176,96,79,0.25)', borderRadius: '8px', padding: '0.6rem 0.75rem', fontSize: '0.75rem', color: '#9a5040' }}>
               <AlertCircle size={13} style={{ flexShrink: 0, marginTop: '1px' }} />
               {error}
             </div>
@@ -151,7 +151,7 @@ export function LoginPage() {
           {/* Submit */}
           <button type="submit" disabled={loading} style={{
             marginTop: '0.25rem', padding: '0.8rem',
-            background: loading ? 'rgba(124,58,237,0.4)' : 'linear-gradient(135deg,#7c3aed,#06b6d4)',
+            background: loading ? 'rgba(110,104,144,0.4)' : '#5d6b80',
             border: 'none', borderRadius: '10px', color: '#fff',
             fontSize: '0.88rem', fontWeight: 700, cursor: loading ? 'not-allowed' : 'pointer',
             letterSpacing: '0.02em', transition: 'opacity 0.2s',
@@ -162,16 +162,16 @@ export function LoginPage() {
 
         {/* Divider */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', margin: '1.1rem 0' }}>
-          <div style={{ flex: 1, height: '1px', background: 'rgba(255,255,255,0.08)' }} />
-          <span style={{ fontSize: '0.68rem', color: 'rgba(255,255,255,0.3)', fontWeight: 600 }}>OR</span>
-          <div style={{ flex: 1, height: '1px', background: 'rgba(255,255,255,0.08)' }} />
+          <div style={{ flex: 1, height: '1px', background: 'rgba(60,52,44,0.096)' }} />
+          <span style={{ fontSize: '0.68rem', color: 'rgba(60,52,44,0.3)', fontWeight: 600 }}>OR</span>
+          <div style={{ flex: 1, height: '1px', background: 'rgba(60,52,44,0.096)' }} />
         </div>
 
         {/* Google */}
         <button onClick={handleGoogle} disabled={loading} style={{
           width: '100%', padding: '0.75rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.6rem',
-          background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.1)',
-          borderRadius: '10px', color: '#f1f5f9', fontSize: '0.85rem', fontWeight: 600,
+          background: 'rgba(60,52,44,0.048)', border: '1px solid rgba(60,52,44,0.12)',
+          borderRadius: '10px', color: '#2b2926', fontSize: '0.85rem', fontWeight: 600,
           cursor: loading ? 'not-allowed' : 'pointer', transition: 'background 0.2s',
         }}>
           {/* Google G */}
@@ -185,10 +185,10 @@ export function LoginPage() {
         </button>
 
         {/* Toggle mode */}
-        <div style={{ textAlign: 'center', marginTop: '1.25rem', fontSize: '0.78rem', color: 'rgba(255,255,255,0.4)' }}>
+        <div style={{ textAlign: 'center', marginTop: '1.25rem', fontSize: '0.78rem', color: 'rgba(60,52,44,0.4)' }}>
           {mode === 'login' ? "Don't have an account? " : 'Already have an account? '}
           <button onClick={() => { setMode(m => m === 'login' ? 'signup' : 'login'); setError(''); }}
-            style={{ background: 'none', border: 'none', color: '#a78bfa', fontWeight: 700, cursor: 'pointer', fontSize: 'inherit', fontFamily: 'inherit', padding: 0 }}>
+            style={{ background: 'none', border: 'none', color: '#5f5a80', fontWeight: 700, cursor: 'pointer', fontSize: 'inherit', fontFamily: 'inherit', padding: 0 }}>
             {mode === 'login' ? 'Sign up' : 'Sign in'}
           </button>
         </div>
