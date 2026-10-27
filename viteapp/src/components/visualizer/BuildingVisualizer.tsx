@@ -463,20 +463,24 @@ function FloorBlock({ floor, index, isTop, plan, pointedRoof, wallsPulse, wallLa
       {/* Room labels — float above the walls of the floor you're looking at */}
       {showLabels && isTop && !plan && placed.map(r => {
         const meta = roomMeta(r.type);
+        // A label is never wider than its room, so neighbours' labels don't run into each other
+        const maxW = Math.max(34, r.w * k - 4);
         return (
-          <div key={`lbl-${r.id}`} style={{
+          <div key={`lbl-${r.id}`} title={`${r.name} · ${r.w}×${r.d} ft · ${r.area_sqft} sq ft`} style={{
             ...billboard((r.x! + r.w / 2) * k, -H - 14, (r.z! + r.d / 2) * k, rotX, rotY),
             background: 'rgba(10,14,22,0.9)',
             borderLeft: `3px solid ${meta.color}`,
-            borderRadius: '4px', padding: '3px 6px',
-            whiteSpace: 'nowrap', lineHeight: 1.15,
+            borderRadius: '4px', padding: '2px 5px',
+            whiteSpace: 'nowrap', lineHeight: 1.15, maxWidth: `${maxW}px`, boxSizing: 'border-box',
           }}>
-            <div style={{ fontSize: '9px', fontWeight: 800, color: '#f1f5f9' }}>
+            <div style={{ fontSize: '8px', fontWeight: 800, color: '#f1f5f9', overflow: 'hidden', textOverflow: 'ellipsis' }}>
               {meta.symbol} {r.name}
             </div>
-            <div style={{ fontSize: '7px', fontWeight: 700, color: meta.color, letterSpacing: '0.05em' }}>
-              {r.w}×{r.d} FT · {r.area_sqft} SQFT
-            </div>
+            {maxW >= 72 && (
+              <div style={{ fontSize: '6.5px', fontWeight: 700, color: meta.color, letterSpacing: '0.04em', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                {r.w}×{r.d} FT · {r.area_sqft} SQFT
+              </div>
+            )}
           </div>
         );
       })}
@@ -540,10 +544,11 @@ function SiteFeatureView({ f, k, ox, oz, rotX, rotY, showLabels }: {
   const x = (f.x - ox) * k, z = (f.z - oz) * k, w = f.w * k, d = f.d * k;
   const meta = SITE_META[f.type];
   const label = showLabels && (
-    <div style={{
+    <div title={`${f.name} · ${f.area_sqft} sq ft`} style={{
       ...billboard(x + w / 2, -18, z + d / 2, rotX, rotY),
       background: 'rgba(10,14,22,0.82)', borderLeft: `2px solid ${meta.color}`, borderRadius: '3px',
       padding: '2px 4px', whiteSpace: 'nowrap', fontSize: '6px', fontWeight: 700, color: '#e2e8f0',
+      maxWidth: `${Math.max(34, w - 4)}px`, boxSizing: 'border-box', overflow: 'hidden', textOverflow: 'ellipsis',
     }}>
       {meta.symbol} {f.name} · {f.area_sqft} SQFT
     </div>
@@ -886,7 +891,8 @@ export function BuildingVisualizer() {
         {/* Drag hint */}
         {totalFloors > 0 && (
           <div style={{
-            position: 'absolute', bottom: '1.75rem', right: '1rem',
+            // Above the toolbar, so the two never overlap in a narrow view
+            position: 'absolute', bottom: '5.6rem', right: '1rem',
             fontSize: '0.6rem', letterSpacing: '0.1em', color: 'var(--text-tertiary)',
             fontWeight: 600, pointerEvents: 'none',
           }}>
@@ -894,55 +900,56 @@ export function BuildingVisualizer() {
           </div>
         )}
 
-        {/* Which floor is shown, and a way back to the whole building */}
-        {cutAt && !exploded && (cutAt < totalFloors || !planMode) && (
-          <div onMouseDown={e => e.stopPropagation()} onClick={e => e.stopPropagation()} style={{
-            position: 'absolute', top: unplacedCount > 0 ? '3rem' : '0.75rem', left: '50%', transform: 'translateX(-50%)', zIndex: 5,
-            display: 'flex', alignItems: 'center', gap: '0.6rem', padding: '0.35rem 0.5rem 0.35rem 0.85rem',
-            background: 'rgba(124,58,237,0.15)', border: '1px solid rgba(124,58,237,0.5)', borderRadius: '20px',
-            color: '#e9d5ff', fontSize: '0.7rem', fontWeight: 700,
-          }}>
-            {cutAt < totalFloors ? `Showing Floor ${cutAt} — floors above hidden` : `Floor ${cutAt} roof hidden to show its rooms`}
-            {!placing && (
-              <button onClick={() => setFocusFloor(null)} style={{ background: 'rgba(255,255,255,0.1)', border: 'none', borderRadius: '12px', padding: '0.2rem 0.6rem', color: '#fff', fontSize: '0.66rem', fontWeight: 700, cursor: 'pointer' }}>
-                {cutAt < totalFloors ? "Show whole building" : "Show roof"}
-              </button>
-            )}
-          </div>
-        )}
+        {/* Top bar of overlays: one wrapping row, so they sit side by side (or wrap) instead of on top of each other */}
+        <div onMouseDown={e => e.stopPropagation()} onClick={e => e.stopPropagation()} style={{
+          position: 'absolute', top: '0.75rem', left: '0.75rem', right: '0.75rem', zIndex: 5,
+          display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '0.45rem', pointerEvents: 'none',
+        }}>
+          {/* Full-screen 3D: hint to open, button to close */}
+          {totalFloors > 0 && !placing && (
+            <button onClick={() => setExpanded(v => !v)} title={expanded ? 'Exit full view (Esc)' : 'Full 3D view — or click the building'}
+              style={{
+                pointerEvents: 'auto', display: 'flex', alignItems: 'center', gap: '0.4rem', padding: '0.35rem 0.7rem',
+                background: 'rgba(13,13,20,0.85)', border: '1px solid var(--border-subtle)', borderRadius: '8px',
+                color: 'var(--text-secondary)', fontSize: '0.66rem', fontWeight: 700, cursor: 'pointer', whiteSpace: 'nowrap',
+              }}>
+              {expanded ? <><Minimize2 size={13} /> Exit full view</> : <><Maximize2 size={13} /> Full 3D view</>}
+            </button>
+          )}
 
-        {/* Full-screen 3D: hint to open, button to close */}
-        {totalFloors > 0 && !placing && (
-          <button
-            onMouseDown={e => e.stopPropagation()}
-            onClick={e => { e.stopPropagation(); setExpanded(v => !v); }}
-            style={{
-              position: 'absolute', top: '0.75rem', left: '0.75rem', zIndex: 5,
-              display: 'flex', alignItems: 'center', gap: '0.4rem', padding: '0.4rem 0.75rem',
-              background: 'rgba(13,13,20,0.85)', border: '1px solid var(--border-subtle)', borderRadius: '8px',
-              color: 'var(--text-secondary)', fontSize: '0.68rem', fontWeight: 700, cursor: 'pointer',
+          {/* Rooms added via chat still need the user to pick a spot */}
+          {unplacedCount > 0 && (
+            <button onClick={() => setPlanOpen(true)} title="Open the Floor Plan to place them" style={{
+              pointerEvents: 'auto', display: 'flex', alignItems: 'center', gap: '0.4rem', whiteSpace: 'nowrap',
+              background: 'rgba(251,191,36,0.12)', border: '1px solid rgba(251,191,36,0.45)', borderRadius: '20px',
+              padding: '0.3rem 0.75rem', color: '#fbbf24', fontSize: '0.66rem', fontWeight: 700, cursor: 'pointer',
             }}>
-            {expanded ? <><Minimize2 size={13} /> Exit full view (Esc)</> : <><Maximize2 size={13} /> Full 3D view · or click the building</>}
-          </button>
-        )}
+              <LayoutGrid size={13} /> {unplacedCount} room{unplacedCount === 1 ? '' : 's'} to place
+            </button>
+          )}
 
-        {/* Rooms added via chat still need the user to pick a spot */}
-        {unplacedCount > 0 && (
-          <button onMouseDown={e => e.stopPropagation()} onClick={e => { e.stopPropagation(); setPlanOpen(true); }} style={{
-            position: 'absolute', top: '0.75rem', left: '50%', transform: 'translateX(-50%)', zIndex: 5,
-            display: 'flex', alignItems: 'center', gap: '0.45rem',
-            background: 'rgba(251,191,36,0.12)', border: '1px solid rgba(251,191,36,0.45)', borderRadius: '20px',
-            padding: '0.35rem 0.85rem', color: '#fbbf24', fontSize: '0.7rem', fontWeight: 700, cursor: 'pointer',
-          }}>
-            <LayoutGrid size={13} /> {unplacedCount} room{unplacedCount === 1 ? '' : 's'} waiting for you to pick a spot — open Floor Plan
-          </button>
-        )}
+          {/* Which floor is shown, and a way back to the whole building */}
+          {cutAt && !exploded && (cutAt < totalFloors || !planMode) && (
+            <div style={{
+              pointerEvents: 'auto', display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.25rem 0.35rem 0.25rem 0.75rem',
+              background: 'rgba(124,58,237,0.15)', border: '1px solid rgba(124,58,237,0.5)', borderRadius: '20px',
+              color: '#e9d5ff', fontSize: '0.66rem', fontWeight: 700, whiteSpace: 'nowrap',
+            }}>
+              {cutAt < totalFloors ? `Floor ${cutAt} only` : `Floor ${cutAt} · roof hidden`}
+              {!placing && (
+                <button onClick={() => setFocusFloor(null)} style={{ background: 'rgba(255,255,255,0.1)', border: 'none', borderRadius: '12px', padding: '0.18rem 0.55rem', color: '#fff', fontSize: '0.64rem', fontWeight: 700, cursor: 'pointer' }}>
+                  {cutAt < totalFloors ? 'Show all' : 'Show roof'}
+                </button>
+              )}
+            </div>
+          )}
+        </div>
 
         {/* Room legend */}
         {totalFloors > 0 && showLabels && !placing && (
           <div style={{
-            position: 'absolute', bottom: '1.5rem', left: '1rem', zIndex: 4,
-            display: 'grid', gridTemplateColumns: 'repeat(2, auto)', gap: '0.25rem 0.75rem',
+            position: 'absolute', bottom: '5.6rem', left: '1rem', zIndex: 4,
+            display: 'grid', gridTemplateColumns: 'repeat(2, auto)', gap: '0.15rem 0.6rem',
             background: 'rgba(13,13,20,0.75)', border: '1px solid var(--border-subtle)',
             borderRadius: '10px', padding: '0.5rem 0.65rem', pointerEvents: 'none',
           }}>

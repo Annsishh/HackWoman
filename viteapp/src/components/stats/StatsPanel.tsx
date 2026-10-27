@@ -1,5 +1,7 @@
+import { useEffect, useState } from 'react';
 import { TrendingUp, TrendingDown } from 'lucide-react';
 import { useBuilding } from '../../context/BuildingContext';
+import { fetchSeismicDemand } from '../../services/api';
 import { formatCurrency, formatPercent, buildingHealthScore } from '../../utils/formatters';
 import { LiveConditions } from './LiveConditions';
 import { SiteCard } from './SiteCard';
@@ -43,7 +45,16 @@ function DonutChart({ segments }: { segments: { color: string; pct: number }[] }
 
 export function StatsPanel() {
   const { state } = useBuilding();
-  const { floors, budget, structuralRisk } = state;
+  const { floors, budget } = state;
+  const [seismic, setSeismic] = useState<Awaited<ReturnType<typeof fetchSeismicDemand>> | null>(null);
+  // Re-run whenever the building or its site changes
+  const shapeKey = JSON.stringify([floors.map(f => [f.shape, f.area_sqft, f.rooms.map(r => [r.x, r.z, r.w, r.d])]),
+    state.location?.lat, state.location?.lng, state.constraints.district_id]);
+  useEffect(() => {
+    let live = true;
+    fetchSeismicDemand().then(s => { if (live) setSeismic(s); }).catch(() => { if (live) setSeismic(null); });
+    return () => { live = false; };
+  }, [shapeKey]);
 
   const totalFloors = floors.length;
   const totalRooms = floors.reduce((s, f) => s + f.rooms.length, 0);
@@ -131,21 +142,22 @@ export function StatsPanel() {
 
         <Divider />
 
-        {/* ── ML Structural Risk (moved here from the 3D view) ── */}
+        {/* ── IS 1893 seismic demand (computed by the backend for this building and site) ── */}
         {(() => {
-          const r = structuralRisk;
-          const color = r === null ? '#64748b' : r >= 0.5 ? '#ef4444' : r >= 0.25 ? '#f59e0b' : '#10b981';
+          const r = seismic?.demand ?? null;
+          const warn = seismic?.warnings.length ?? 0;
+          const color = r === null ? '#64748b' : warn ? '#f59e0b' : '#10b981';
           return (
-            <div style={{ background: `${color}10`, border: `1px solid ${color}30`, borderLeft: `3px solid ${color}`, borderRadius: '8px', padding: '0.7rem 0.75rem' }}>
+            <div style={{ background: `${color}10`, border: `1px solid ${color}30`, borderLeft: `3px solid ${color}`, borderRadius: '8px', padding: '0.7rem 0.75rem' }}
+              title="Design base shear VB as a share of the building's seismic weight W — IS 1893 (Part 1):2016 equivalent static method, medium soil, SMRF. Full analysis on the Simulations page.">
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                <span style={{ fontSize: '0.6rem', fontWeight: 700, letterSpacing: '0.12em', color: 'var(--text-tertiary)' }}>ML STRUCTURAL RISK</span>
-                <span style={{ fontSize: '1.15rem', fontWeight: 800, color }}>{r === null ? '—' : `${Math.round(r * 100)}%`}</span>
-              </div>
-              <div style={{ marginTop: '0.4rem', height: '4px', background: 'rgba(255,255,255,0.05)', borderRadius: '2px', overflow: 'hidden' }}>
-                <div style={{ height: '100%', width: `${r === null ? 0 : Math.round(r * 100)}%`, background: color, borderRadius: '2px', transition: 'width 0.5s ease' }} />
+                <span style={{ fontSize: '0.6rem', fontWeight: 700, letterSpacing: '0.12em', color: 'var(--text-tertiary)' }}>SEISMIC DEMAND · IS 1893</span>
+                <span style={{ fontSize: '1.15rem', fontWeight: 800, color }}>{r === null ? '—' : `${(r * 100).toFixed(1)}% W`}</span>
               </div>
               <div style={{ fontSize: '0.6rem', color: 'var(--text-tertiary)', marginTop: '0.35rem' }}>
-                {r === null ? 'Awaiting first assessment — add a floor or room' : `${r >= 0.5 ? 'HIGH' : r >= 0.25 ? 'MODERATE' : 'LOW'} · seismic, soil & wind`}
+                {r === null
+                  ? (floors.length ? 'Zone unknown for this site' : 'Add a floor to analyse')
+                  : `Zone ${seismic?.zone} · ${warn ? `${warn} code check(s) need attention` : 'code checks pass'}`}
               </div>
             </div>
           );

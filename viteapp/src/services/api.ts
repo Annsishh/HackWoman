@@ -80,24 +80,40 @@ export interface ModelInfo {
   risk_model: { loaded: boolean; meta: Record<string, unknown> | null };
 }
 
+// ── Workspaces ───────────────────────────────────────────────────────────────
+// "main" is the user's building; "draft" is a design the AI generator proposed.
+// While the draft is open in the editor every request goes to it (the backend
+// reads the X-Workspace header), so the normal editing tools work on it.
+
+export type Workspace = 'main' | 'draft';
+let activeWorkspace: Workspace = 'main';
+
+export function setApiWorkspace(workspace: Workspace): void {
+  activeWorkspace = workspace;
+}
+
+export function getApiWorkspace(): Workspace {
+  return activeWorkspace;
+}
+
 // ── Keeping the page in step with the server ─────────────────────────────────
 // If the server says a floor/room doesn't exist, the page is showing a stale
 // building (e.g. the backend restarted). Listeners get the server's real state.
 
 type StateListener = (state: BuildingState) => void;
-const stateListeners = new Set<StateListener>();
+const stateListeners: Record<Workspace, Set<StateListener>> = { main: new Set(), draft: new Set() };
 
-export function onServerState(listener: StateListener): () => void {
-  stateListeners.add(listener);
-  return () => { stateListeners.delete(listener); };
+export function onServerState(listener: StateListener, workspace: Workspace = 'main'): () => void {
+  stateListeners[workspace].add(listener);
+  return () => { stateListeners[workspace].delete(listener); };
 }
 
-async function resyncFromServer(): Promise<boolean> {
+async function resyncFromServer(workspace: Workspace): Promise<boolean> {
   try {
-    const res = await fetch(`${API_BASE_URL}/api/state`);
+    const res = await fetch(`${API_BASE_URL}/api/state`, { headers: { 'X-Workspace': workspace } });
     if (!res.ok) return false;
     const state = (await res.json()) as BuildingState;
-    stateListeners.forEach(l => l(state));
+    stateListeners[workspace].forEach(l => l(state));
     return true;
   } catch {
     return false;
@@ -106,10 +122,10 @@ async function resyncFromServer(): Promise<boolean> {
 
 // ── Internal fetch helper ────────────────────────────────────────────────────
 
-async function request<T>(path: string, options?: RequestInit): Promise<T> {
+async function request<T>(path: string, options?: RequestInit, workspace: Workspace = activeWorkspace): Promise<T> {
   const res = await fetch(`${API_BASE_URL}${path}`, {
-    headers: { 'Content-Type': 'application/json' },
     ...options,
+    headers: { 'Content-Type': 'application/json', 'X-Workspace': workspace, ...options?.headers },
   });
 
   if (!res.ok) {
@@ -121,7 +137,7 @@ async function request<T>(path: string, options?: RequestInit): Promise<T> {
       // ignore parse errors
     }
     if (res.status === 404 || /doesn't exist|not found/i.test(detail)) {
-      if (await resyncFromServer()) {
+      if (await resyncFromServer(workspace)) {
         detail += ' Your screen was out of date, so it has been refreshed from the server — please try again.';
       }
     }
@@ -133,9 +149,9 @@ async function request<T>(path: string, options?: RequestInit): Promise<T> {
 
 // ── Public API ───────────────────────────────────────────────────────────────
 
-/** Fetch the current authoritative building state from the server. */
-export async function fetchBuildingState(): Promise<BuildingState> {
-  return request<BuildingState>('/api/state');
+/** Fetch the current authoritative building state (of the given workspace) from the server. */
+export async function fetchBuildingState(workspace: Workspace = activeWorkspace): Promise<BuildingState> {
+  return request<BuildingState>('/api/state', undefined, workspace);
 }
 
 /**
@@ -200,6 +216,11 @@ export async function updateSiteFeature(featureId: string, rect: Rect): Promise<
 
 export async function deleteSiteFeature(featureId: string): Promise<BuildingState> {
   return request<BuildingState>(`/api/site-features/${featureId}`, { method: 'DELETE' });
+}
+
+/** Delete one floor with its rooms; the floors above move down a level. */
+export async function deleteFloor(floorNumber: number): Promise<BuildingState> {
+  return request<BuildingState>(`/api/floors/${floorNumber}`, { method: 'DELETE' });
 }
 
 /** Give one floor its own shape; the backend rejects shapes that overhang the floor below. */
@@ -340,6 +361,190 @@ export async function fetchSeismicAnalysis(opts: {
     soil: opts.soil, frame: opts.frame, importance: String(opts.importance), infill: String(opts.infill),
   });
   return request<SeismicReport>(`/api/analysis/seismic?${params}`);
+}
+
+/** IS 1893 base shear of the building as a fraction of its weight, and the code checks it fails. */
+export async function fetchSeismicDemand(): Promise<{ demand: number | null; zone: string | null; warnings: { rule: string; detail: string }[] }> {
+  return request('/api/analysis/seismic-demand');
+}
+
+// ── AI design generation (backend/services/design_generator.py) ──────────────
+
+export interface DesignBrief {
+  rooms?: { type: string; count: number; area_sqft?: number | null }[];
+  floors?: number | null;
+  budget_inr?: number | null;
+  floor_area_sqft?: number | null;
+  plot_area_sqft?: number | null;
+  shape?: string | null;
+  parking_cars?: number;
+  garden?: boolean;
+  garden_area_sqft?: number | null;
+}
+
+export interface DesignEvaluation {
+  valid: boolean;
+  issues: string[];
+  cost: number;
+  boq_total: number;
+  budget: number;
+  remaining: number;
+  boq_approximate: boolean;
+  boq_notes: string[];
+  floors: number;
+  rooms: number;
+  unplaced: string[];
+  floor_use: { floor: number; shape: string; area_sqft: number; rooms_sqft: number; rooms: number }[];
+  seismic_demand: number | null;
+  code_warnings: { rule: string; detail: string }[];
+  suggestions: string[];
+}
+
+export interface CandidateMeta {
+  shape: string;
+  floors: number;
+  size_scale: number;
+  cost: number;
+  code_warnings: number;
+}
+
+export interface GenerateResult {
+  feasible: boolean;
+  parser: 'gemini' | 'rules';
+  notes: string[];
+  brief: DesignBrief;
+  from_setup: string[];
+  assumptions: string[];
+  warnings: string[];
+  missing: string[];
+  reasons: string[];
+  searched: number;
+  chosen?: CandidateMeta;
+  alternatives: CandidateMeta[];
+  evaluation?: DesignEvaluation;
+  why?: string[];
+}
+
+export interface DraftInfo {
+  exists: boolean;
+  state?: BuildingState;
+  evaluation?: DesignEvaluation;
+  current?: { cost: number; floors: number; rooms: number };
+}
+
+export async function generateDesign(prompt: string, overrides?: DesignBrief): Promise<GenerateResult> {
+  return request<GenerateResult>('/api/design/generate', {
+    method: 'POST', body: JSON.stringify({ prompt, overrides: overrides ?? null }),
+  });
+}
+
+export async function getDraft(): Promise<DraftInfo> {
+  return request<DraftInfo>('/api/design/draft');
+}
+
+/** Make the generated design the user's building (the backend re-checks it first). */
+export async function applyDraft(): Promise<BuildingState> {
+  return request<BuildingState>('/api/design/draft/apply', { method: 'POST' }, 'main');
+}
+
+export async function discardDraft(): Promise<DraftInfo> {
+  return request<DraftInfo>('/api/design/draft', { method: 'DELETE' }, 'main');
+}
+
+// ── Lifecycle & maintenance (backend/services/lifecycle.py) ──────────────────
+
+export interface LifecycleOptions {
+  horizon_years: number;
+  discount_pct: number;
+  structure: 'rcc_framed' | 'load_bearing';
+  wall_material: 'burnt_clay_brick' | 'fly_ash_brick' | 'concrete_block' | 'aac_block';
+  exterior_wall_in: number | null;
+  plaster_mm: number;
+  roof_insulation: boolean;
+  exterior_finish: 'exterior_emulsion' | 'exterior_cement_paint';
+  glass_u: number | null;
+  glass_shgc: number | null;
+  occupants: number | null;
+  town: 'over_100k' | '20k_100k' | null;
+  roof_type: 'concrete' | 'tiled' | 'gi_sheet' | 'asbestos';
+}
+
+export interface PricedTask {
+  task: string; every_years: number; source: string; quantity: number; unit: string; rate: number;
+  rate_ref: string; cost_per_event: number; events: number; due_years: number[]; total: number;
+  present_value: number; per_year: number;
+}
+
+export interface LifecycleSummary {
+  initial_cost: number;
+  maintenance_priced: number;
+  maintenance_priced_pv: number;
+  yardstick_total: number;
+  retv: number | null;
+  u_wall: number;
+  u_roof: number;
+  harvest_litres: number | null;
+  horizon_years: number;
+}
+
+export interface LifecycleReport {
+  error?: string;
+  site: { label: string; lat: number; lon: number; zone: string | null; climate_zone: string | null };
+  options: LifecycleOptions;
+  initial_cost: number;
+  quantities: Record<string, number>;
+  maintenance: {
+    priced: PricedTask[];
+    unpriced: { task: string; every_years: number; source: string; why: string; due_years?: number[] }[];
+    replacements: { component: string; life_years: number; source: string; replacements_in_horizon: number; due_years: number[] }[];
+    priced_total: number;
+    priced_present_value: number;
+    yardstick: { annual_repair: number; special_repair: number; electrical: number; total: number; basis: string; source: string };
+    inspections: { text: string; source: string }[];
+    coastal: boolean;
+  };
+  envelope: {
+    u_wall: number; wall_layers: { layer: string; R: number }[];
+    u_roof: number; u_roof_max: number; roof_ok: boolean; roof_layers: { layer: string; R: number }[];
+    glass: { u: number; shgc: number; source: string };
+    facades: { side: string; faces: string; bearing_deg: number; wall_m2: number; window_m2: number; omega: number }[];
+    climate_zone: string | null; wwr: number | null;
+    retv: number | null; retv_max?: number; retv_ok?: boolean; retv_note?: string; retv_source?: string;
+    coefficients?: { a: number; b: number; c: number };
+    window_to_floor_pct: number | null; wfr_min_pct: number | null; wfr_note: string; energy_note: string;
+    sources: Record<string, string>; assumptions: string[];
+  };
+  water: {
+    missing: string[];
+    harvest: { annual_litres: number; rain_mm: number; roof_m2: number; runoff_coefficient: number; source: string; rain_source: string } | null;
+    per_capita: Record<string, { lphd: [number, number]; source: string }>;
+    flushing_lphd: { value: number; source: string };
+    demand_litres_per_day?: [number, number];
+    flushing_litres_per_year?: number;
+    harvest_share_of_flushing_pct?: number;
+  };
+  adaptability: { topic: string; detail: string }[];
+  building_life: { years: number; structure: string; source: string; note: string; warning?: string };
+  missing: string[];
+  summary: LifecycleSummary;
+}
+
+export interface LifecycleAlternative { label: string; design: Workspace; options: LifecycleOptions }
+
+export async function fetchLifecycle(options: LifecycleOptions, workspace: Workspace): Promise<LifecycleReport> {
+  return request<LifecycleReport>('/api/lifecycle', { method: 'POST', body: JSON.stringify(options) }, workspace);
+}
+
+export async function compareLifecycle(alternatives: LifecycleAlternative[]): Promise<{
+  alternatives: (LifecycleAlternative & { summary: LifecycleSummary | null; error: string | null; missing: string[] })[];
+}> {
+  return request('/api/lifecycle/compare', { method: 'POST', body: JSON.stringify({ alternatives }) }, 'main');
+}
+
+export async function fetchLifecycleSources(): Promise<{
+  generated: string; note: string; sources: Record<string, { title: string; publisher: string; url: string; sha256: string; retrieved: string }>;
+}> {
+  return request('/api/lifecycle/sources', undefined, 'main');
 }
 
 /** Look up a place without moving the building. */

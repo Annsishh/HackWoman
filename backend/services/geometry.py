@@ -281,3 +281,34 @@ def best_spot(floor: Floor, options: list[tuple[int, int]], taken: list[Rect]) -
         if spot and (best is None or (spot.z, spot.x) < (best.z, best.x)):
             best = spot
     return best
+
+
+def arrange_rooms(floor: Floor, rooms: list) -> list[tuple[object, Rect | None]]:
+    """
+    Starting layout for several rooms (anything with .type and .area_sqft):
+    greedy packing, tried with a few room orders; keeps whichever fits the most
+    rooms. Rooms that don't fit get None and are left for the user to place.
+    """
+    from models.building import default_dims
+    orders = [
+        sorted(rooms, key=lambda r: -r.area_sqft),            # biggest first
+        sorted(rooms, key=lambda r: (r.type, -r.area_sqft)),  # like rooms side by side
+        sorted(rooms, key=lambda r: r.area_sqft),             # smallest first
+    ]
+    existing = [r.rect for r in floor.rooms if r.placed]
+    best: list[tuple[object, Rect | None]] = []
+    for order in orders:
+        taken = list(existing)
+        result = []
+        for room in order:
+            w, d = default_dims(room.area_sqft)
+            # Any proportion is fine as long as it isn't bigger than the size we checked against
+            spot = best_spot(floor, shape_options(room.area_sqft, w * d), taken)
+            if spot:
+                taken.append(spot)
+            result.append((room, spot))
+        if not best or sum(s is not None for _, s in result) > sum(s is not None for _, s in best):
+            best = result
+        if all(s is not None for _, s in best):
+            break
+    return best

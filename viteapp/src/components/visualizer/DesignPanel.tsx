@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { MousePointerClick, X, Trash2, RotateCw, Move, Eye } from 'lucide-react';
 import { useBuilding, type BuildingState, type Floor, type Room, type WallSide, type WindowSpec } from '../../context/BuildingContext';
 import { useDesign } from '../../context/DesignContext';
-import { deleteRoom, setFloorShape, setRoomWindows, setWalls, updateRoom } from '../../services/api';
+import { deleteFloor, deleteRoom, setFloorShape, setRoomWindows, setWalls, updateRoom } from '../../services/api';
 import { ROOM_META, roomMeta, defaultDims, MIN_SIDE_FT, insideUnion, overlaps } from '../../utils/rooms';
 import { SHAPES } from '../../utils/shapes';
 import { PRESETS, sizeChoices } from '../../utils/presets';
@@ -77,6 +77,21 @@ export function DesignPanel() {
           <>
             {(tab === 'room' || tab === 'windows') && floor && (
               <FloorPicker floors={floors} value={floor.number} onChange={n => { setFocusFloor(n); setPlacing(null); }} />
+            )}
+            {tab === 'room' && floor && (
+              <button disabled={busy} title={`Remove Floor ${floor.number} and its ${floor.rooms.length} room(s); floors above move down`}
+                onClick={() => {
+                  const what = `Delete Floor ${floor.number}${floor.rooms.length ? ` and its ${floor.rooms.length} room(s)` : ''}?`
+                    + (floor.number < floors.length ? ' Floors above it move down one level.' : '');
+                  if (window.confirm(what)) {
+                    setPlacing(null);
+                    run(() => deleteFloor(floor.number), `Floor ${floor.number} deleted.`);
+                  }
+                }}
+                style={{ ...FIELD, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.35rem', cursor: 'pointer',
+                  fontSize: '0.72rem', fontWeight: 700, color: '#fca5a5', borderColor: 'rgba(248,113,113,0.35)', background: 'rgba(248,113,113,0.06)' }}>
+                <Trash2 size={13} /> Delete Floor {floor.number}
+              </button>
             )}
             {tab === 'room' && floor && (
               <RoomTab floor={floor} busy={busy} run={run} />

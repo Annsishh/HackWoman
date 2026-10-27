@@ -1,13 +1,17 @@
 import os
 import logging
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 from dotenv import load_dotenv
 
 from routes.chat import router as chat_router
 from routes.building import router as building_router
 from routes.location import router as location_router
 from routes.analysis import router as analysis_router
+from routes.design import router as design_router
+from routes.lifecycle import router as lifecycle_router
+from state.store import WORKSPACES, NoDraft, workspace
 
 load_dotenv()
 
@@ -36,11 +40,31 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# ── Workspace: the user's building or the AI-generated draft ─────────────────
+@app.middleware("http")
+async def select_workspace(request: Request, call_next):
+    name = request.headers.get("x-workspace", "main")
+    if name not in WORKSPACES:
+        return JSONResponse({"detail": f"Unknown workspace '{name}'."}, status_code=400)
+    token = workspace.set(name)
+    try:
+        return await call_next(request)
+    finally:
+        workspace.reset(token)
+
+
+@app.exception_handler(NoDraft)
+async def no_draft(_: Request, exc: NoDraft):
+    return JSONResponse({"detail": str(exc)}, status_code=409)
+
+
 # ── Routers ───────────────────────────────────────────────────────────────────
 app.include_router(chat_router, prefix="/api", tags=["chat"])
 app.include_router(building_router, prefix="/api", tags=["building"])
 app.include_router(location_router, prefix="/api", tags=["location"])
 app.include_router(analysis_router, prefix="/api", tags=["analysis"])
+app.include_router(design_router, prefix="/api", tags=["design"])
+app.include_router(lifecycle_router, prefix="/api", tags=["lifecycle"])
 
 
 @app.get("/")

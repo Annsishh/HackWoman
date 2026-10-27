@@ -87,6 +87,12 @@ def meta() -> dict:
     }
 
 
+@lru_cache(maxsize=None)
+def item(code: str) -> dict | None:
+    """One finished item of the parsed schedule by its SR code, e.g. "8.63"."""
+    return next((row for row in _load("items.json") or [] if row["code"] == code), None)
+
+
 def search(query: str, limit: int = 20) -> list[dict]:
     """Case-insensitive search over the parsed schedule (finished items and basic materials)."""
     words = [w for w in re.split(r"\s+", query.lower().strip()) if w]

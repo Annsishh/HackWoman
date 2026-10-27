@@ -11,7 +11,7 @@ import { DesignProvider } from './context/DesignContext';
 import { PresetDialog } from './components/planner/PresetDialog';
 import { BuildingVisualizer } from './components/visualizer/BuildingVisualizer';
 import { StatsPanel } from './components/stats/StatsPanel';
-import { ModelsPage } from './components/pages/ModelsPage';
+import { ProPage } from './components/pages/ProPage';
 import { DatasetsPage } from './components/pages/DatasetsPage';
 import { SimulationsPage } from './components/pages/SimulationsPage';
 import { ProfilePage } from './components/pages/ProfilePage';
@@ -54,10 +54,11 @@ function AppShell() {
         />
         <DesignProvider>
         <div style={{ display: 'flex', flex: 1, overflow: 'hidden' }}>
-          {currentPage !== 'profile' && <LeftSidebar />}
+          {/* Pro lays out its own tabs, each with the panels it needs */}
+          {currentPage !== 'profile' && currentPage !== 'models' && <LeftSidebar />}
 
           {currentPage === 'home' && <><LeftWorkspace /><BuildingVisualizer /><StatsPanel /></>}
-          {currentPage === 'models' && <ModelsPage />}
+          {currentPage === 'models' && <ProPage />}
           {currentPage === 'datasets' && <DatasetsPage />}
           {currentPage === 'simulations' && <SimulationsPage />}
           {currentPage === 'profile' && <ProfilePage onBack={() => setCurrentPage('home')} />}

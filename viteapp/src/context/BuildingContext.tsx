@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useEffect, useReducer, type ReactNode } from 'react';
-import { fetchBuildingState, onServerState } from '../services/api';
+import { fetchBuildingState, onServerState, type Workspace } from '../services/api';
 import { getDefaultDistrict, getDistrictById, type DistrictData } from '../data/karnataka_db';
 
 // --- Types ---
@@ -223,21 +223,28 @@ const BuildingContext = createContext<{
   dispatch: React.Dispatch<BuildingAction>;
 } | undefined>(undefined);
 
-export function BuildingProvider({ children }: { children: ReactNode }) {
-  const [state, dispatch] = useReducer(buildingReducer, initialState);
+/**
+ * Holds one building for the components inside it. The app has one for the
+ * user's building; the Pro design generator nests a second one, with
+ * workspace="draft", around the editor showing the generated design.
+ */
+export function BuildingProvider({ children, workspace = 'main', initial }: {
+  children: ReactNode; workspace?: Workspace; initial?: BuildingState;
+}) {
+  const [state, dispatch] = useReducer(buildingReducer, initial ? buildingReducer(initialState, { type: 'SET_STATE', payload: initial }) : initialState);
 
   // Stay in step with the server: adopt its state when a request finds the page
   // stale, and re-check whenever the user comes back to the tab.
   useEffect(() => {
-    const off = onServerState(s => dispatch({ type: 'SET_STATE', payload: s }));
+    const off = onServerState(s => dispatch({ type: 'SET_STATE', payload: s }), workspace);
     const refresh = () => {
       if (document.visibilityState === 'visible') {
-        fetchBuildingState().then(s => dispatch({ type: 'SET_STATE', payload: s })).catch(() => { /* backend offline */ });
+        fetchBuildingState(workspace).then(s => dispatch({ type: 'SET_STATE', payload: s })).catch(() => { /* backend offline */ });
       }
     };
     document.addEventListener('visibilitychange', refresh);
     return () => { off(); document.removeEventListener('visibilitychange', refresh); };
-  }, []);
+  }, [workspace]);
 
   return (
     <BuildingContext.Provider value={{ state, dispatch }}>

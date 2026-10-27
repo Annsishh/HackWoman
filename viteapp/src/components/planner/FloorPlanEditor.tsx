@@ -219,15 +219,7 @@ export function FloorPlanEditor({ onClose, initialFloor }: { onClose: () => void
   const featureRects = site.features
     .map(f => (drag && drag.id === f.id ? { f, rect: drag.rect } : { f, rect: f as Rect }));
 
-  const label = (rect: Rect, title: string, sub: string, color: string) => {
-    const fs = Math.max(1.1, Math.min(2.4, Math.min(rect.w, rect.d) * 0.2));
-    return (
-      <g pointerEvents="none">
-        <text x={rect.x + rect.w / 2} y={rect.z + rect.d / 2 - fs * 0.15} textAnchor="middle" fontSize={fs} fontWeight={700} fill="#f1f5f9">{title}</text>
-        <text x={rect.x + rect.w / 2} y={rect.z + rect.d / 2 + fs * 1.05} textAnchor="middle" fontSize={fs * 0.8} fontWeight={600} fill={color}>{sub}</text>
-      </g>
-    );
-  };
+  const label = (rect: Rect, title: string, sub: string, color: string) => fitLabel(rect, title, sub, color);
 
   const typeOptions = isSite
     ? (Object.keys(SITE_META) as SiteType[]).map(t => ({ id: t, ...SITE_META[t] }))
@@ -491,6 +483,42 @@ function Outline({ parts }: { parts: Rect[] }) {
     }
   }
   return <path d={segs.join('')} stroke="#e2e8f0" strokeWidth="0.45" strokeLinecap="square" fill="none" pointerEvents="none" />;
+}
+
+/* Average glyph width of the plan font, as a fraction of the font size (bold sans, emoji ≈ 1.2) */
+const GLYPH = 0.62;
+const textWidth = (s: string, fs: number) => Array.from(s).reduce((w, ch) => w + (ch.codePointAt(0)! > 0x2000 ? 1.2 : GLYPH), 0) * fs;
+
+/**
+ * Room / feature name and size, sized to fit inside its rectangle (plan units
+ * are feet). Long names in small rooms are shortened with "…", the size line is
+ * dropped when there's no room for it, and everything is clipped to the box.
+ */
+function fitLabel(rect: Rect, title: string, sub: string, color: string) {
+  const pad = Math.min(0.8, rect.w * 0.08);
+  const w = rect.w - 2 * pad, h = rect.d - 2 * pad;
+  const MIN = 0.7, MAX = 1.6;
+  let fs = Math.min(MAX, (w / textWidth(title, 1)), h / 2.4);
+  let shown = title;
+  if (fs < MIN) {
+    fs = Math.max(0.45, Math.min(MIN, h / 1.3));
+    while (shown.length > 2 && textWidth(shown + '…', fs) > w) shown = Array.from(shown).slice(0, -1).join('');
+    if (shown !== title) shown = shown.trimEnd() + '…';
+  }
+  let subFs = Math.min(fs * 0.78, w / textWidth(sub, 1));
+  const showSub = subFs >= 0.45 && fs * 1.15 + subFs * 1.2 <= h;
+  if (!showSub) subFs = 0;
+  const block = fs + (showSub ? 0.3 * fs + subFs : 0);
+  const titleY = rect.d / 2 - block / 2 + fs * 0.82;
+  return (
+    <svg x={rect.x} y={rect.z} width={rect.w} height={rect.d} overflow="hidden" pointerEvents="none">
+      <title>{`${title} — ${sub}`}</title>
+      <text x={rect.w / 2} y={titleY} textAnchor="middle" fontSize={fs} fontWeight={700} fill="#f1f5f9">{shown}</text>
+      {showSub && (
+        <text x={rect.w / 2} y={titleY + 0.3 * fs + subFs * 0.95} textAnchor="middle" fontSize={subFs} fontWeight={600} fill={color}>{sub}</text>
+      )}
+    </svg>
+  );
 }
 
 function FeatureShape({ f, rect, selected, armed, onPointerDown, label }: {

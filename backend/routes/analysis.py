@@ -5,7 +5,7 @@ import asyncio
 from fastapi import APIRouter, HTTPException, Query
 
 from services.location_resolver import DISTRICT_COORDS
-from services.seismic_analysis import seismic_report
+from services.seismic_analysis import code_warnings, seismic_demand, seismic_report, site_of, zone_at
 from services.site_profile import site_profile
 from state.store import store
 
@@ -43,6 +43,14 @@ async def district_profiles() -> list[dict]:
             return {"district_id": district_id, **await site_profile(*coords)}
 
     return await asyncio.gather(*(one(d, c) for d, c in DISTRICT_COORDS.items()))
+
+@router.get("/analysis/seismic-demand")
+async def get_seismic_demand() -> dict:
+    """Quick IS 1893 figure for the building in the request's workspace (local data, no network)."""
+    state = store.get()
+    lat, lon, in_ka, _, _ = site_of(state)
+    return {"demand": seismic_demand(state), "zone": zone_at(lat, lon, in_ka)["zone"], "warnings": code_warnings(state)}
+
 
 IMPORTANCE_FACTORS = (1.0, 1.2, 1.5)  # IS 1893 (Part 1):2016 Table 8
 

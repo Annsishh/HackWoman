@@ -87,7 +87,7 @@ async def measured_climate(lat: float, lon: float, client: httpx.AsyncClient) ->
         start = end.replace(year=end.year - CLIMATE_YEARS)
         res = await client.get(ARCHIVE, params={
             "latitude": lat, "longitude": lon, "start_date": start.isoformat(), "end_date": end.isoformat(),
-            "daily": "temperature_2m_max,relative_humidity_2m_mean,wind_gusts_10m_max",
+            "daily": "temperature_2m_max,relative_humidity_2m_mean,wind_gusts_10m_max,precipitation_sum",
             "wind_speed_unit": "kmh", "timezone": "auto",
         })
         res.raise_for_status()
@@ -112,10 +112,13 @@ async def measured_climate(lat: float, lon: float, client: httpx.AsyncClient) ->
         zone = best[0] if best[1] > 6 else "Composite"
         temps = sorted(t for t in d["temperature_2m_max"] if t is not None)
         gusts = [g for g in d["wind_gusts_10m_max"] if g is not None]
+        rain = [r for r in d["precipitation_sum"] if r is not None]
         return {
             "nbc_zone": zone, "month_counts": counts, "months": months,
             "hot_day_c": round(temps[int(0.95 * (len(temps) - 1))], 1) if temps else None,
             "record_gust_kmh": round(max(gusts)) if gusts else None,
+            # Mean yearly total over the days the archive has values for
+            "annual_rain_mm": round(sum(rain) * 365.25 / len(rain)) if rain else None,
             "period": f"{start.isoformat()} → {end.isoformat()}",
         }
     return await _cached(f"climate:{lat:.2f},{lon:.2f}", fetch)

@@ -5,7 +5,7 @@ from state.store import store
 from services.building_engine import _recalculate_budget
 import services.building_engine as engine
 from services.geometry import (
-    SHAPES, best_spot, footprints_for, plot_layout, shape_options, support_error, sync_footprints,
+    SHAPES, arrange_rooms, footprints_for, plot_layout, support_error, sync_footprints,
     validate_room_rect, validate_site_rect, window_error,
 )
 from services.materials_estimator import format_cost
@@ -250,6 +250,28 @@ async def set_floor_shape(floor_number: int, req: FloorShapeRequest) -> Building
     return _commit(new_state)
 
 
+@router.delete("/floors/{floor_number}", response_model=BuildingState)
+async def delete_floor(floor_number: int) -> BuildingState:
+    """Remove one floor and its rooms; the floors above move down a level."""
+    state = store.get()
+    floors = sorted(state.floors, key=lambda f: f.number)
+    if not any(f.number == floor_number for f in floors):
+        raise HTTPException(404, f"Floor {floor_number} doesn't exist.")
+    # The floors above drop onto the one below the gap: they must still sit on it
+    shapes = [f.shape for f in floors if f.number != floor_number]
+    footprints = footprints_for(state, shapes)
+    if err := support_error(shapes, footprints):
+        raise HTTPException(400, f"Can't delete Floor {floor_number}: the floors above would then overhang. {err}")
+    if floor_number == 1 and footprints:
+        probe = state.model_copy(deep=True)
+        probe.site.footprint = footprints[0]
+        for feature in probe.site.features:
+            if validate_site_rect(probe, feature.rect, ignore_id=feature.id):
+                raise HTTPException(400, f"Floor 2 would become the ground floor and cover {feature.name}. Move it first.")
+    new_state, _ = engine.remove_floor(state, floor_number)
+    return _commit(new_state)
+
+
 # ── Windows ──────────────────────────────────────────────────────────────────
 
 class WindowRequest(BaseModel):
@@ -311,36 +333,6 @@ class BatchRoomsRequest(BaseModel):
     arrange: bool = True
 
 
-def _arrange(floor, rooms: list[BatchRoom]) -> list[tuple[BatchRoom, Rect | None]]:
-    """
-    Starting layout for a batch: greedy packing, tried with a few room orders;
-    keeps whichever fits the most rooms. Rooms that don't fit get None and are
-    left for the user to place.
-    """
-    orders = [
-        sorted(rooms, key=lambda r: -r.area_sqft),            # biggest first
-        sorted(rooms, key=lambda r: (r.type, -r.area_sqft)),  # like rooms side by side
-        sorted(rooms, key=lambda r: r.area_sqft),             # smallest first
-    ]
-    existing = [r.rect for r in floor.rooms if r.placed]
-    best: list[tuple[BatchRoom, Rect | None]] = []
-    for order in orders:
-        taken = list(existing)
-        result = []
-        for room in order:
-            w, d = default_dims(room.area_sqft)
-            # Any proportion is fine as long as it isn't bigger than the size we checked against
-            spot = best_spot(floor, shape_options(room.area_sqft, w * d), taken)
-            if spot:
-                taken.append(spot)
-            result.append((room, spot))
-        if not best or sum(s is not None for _, s in result) > sum(s is not None for _, s in best):
-            best = result
-        if all(s is not None for _, s in best):
-            break
-    return best
-
-
 @router.post("/rooms/batch", response_model=BuildingState)
 async def add_rooms_batch(req: BatchRoomsRequest) -> BuildingState:
     state = store.get()
@@ -360,7 +352,7 @@ async def add_rooms_batch(req: BatchRoomsRequest) -> BuildingState:
     if need > free:
         raise HTTPException(400, f"These rooms need {need} sq ft but Floor {req.floor_number} has {free} sq ft free.")
 
-    spots = _arrange(floor, req.rooms) if req.arrange else [(room, None) for room in req.rooms]
+    spots = arrange_rooms(floor, req.rooms) if req.arrange else [(room, None) for room in req.rooms]
     new_state = state
     for room, spot in spots:
         if spot is not None:
